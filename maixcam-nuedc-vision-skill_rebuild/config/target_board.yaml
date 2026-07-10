@@ -1,0 +1,13 @@
+# fixed_center is the safe bring-up mode; red/rectangle modes require onsite calibration.
+mode: fixed_center
+red_center:
+  enabled: false
+  lab_threshold: [0, 100, 25, 127, -20, 100]
+  roi: []
+  area_threshold: 8
+  pixels_threshold: 8
+  field_measurement_required: true
+rectangle_board:
+  threshold: 10000
+  roi: []
+  field_measurement_required: true

@@ -1,0 +1,5 @@
+aimed_threshold_x: 8
+aimed_threshold_y: 8
+aimed_required_frames: 3
+lost_timeout_ms: 300
+field_measurement_required: [aimed_threshold_x, aimed_threshold_y, lost_timeout_ms]

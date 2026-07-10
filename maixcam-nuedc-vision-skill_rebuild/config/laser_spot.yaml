@@ -1,0 +1,38 @@
+# Use red/green or a low-risk substitute dot for bring-up. Never aim at people,
+# animals, vehicles, windows, mirrors, or other reflective surfaces.
+# The 405 nm profile must never be the default or the current test entry. Keep
+# it disabled until its LAB threshold is measured on site and safety is confirmed.
+active_profile: red
+bringup_rule: "Use red or green for first hardware tests; do not enable 405 nm by default."
+profiles:
+  red:
+    enabled: true
+    lab_threshold: [0, 100, 25, 127, -20, 100]
+    roi: []
+    area_threshold: 3
+    pixels_threshold: 3
+    min_density: 0.20
+    score_pixels: 20
+    merge: false
+    field_measurement_required: true
+  green:
+    enabled: true
+    lab_threshold: [0, 100, -128, -10, -10, 100]
+    roi: []
+    area_threshold: 3
+    pixels_threshold: 3
+    min_density: 0.20
+    score_pixels: 20
+    merge: false
+    field_measurement_required: true
+  blue_violet_405:
+    enabled: false
+    lab_threshold: [0, 100, -128, 127, -128, 127]
+    roi: []
+    area_threshold: 3
+    pixels_threshold: 3
+    min_density: 0.20
+    score_pixels: 20
+    merge: false
+    field_measurement_required: true
+    enable_only_after: "User manually measures LAB thresholds on the actual MaixCAM-Pro and target paper in MaixVision, then confirms the test is safe."
