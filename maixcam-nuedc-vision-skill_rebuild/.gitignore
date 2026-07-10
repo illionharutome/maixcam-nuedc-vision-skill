@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.log
+logs/serial/*.jsonl
+models/maixcam/*
+models/onnx/*
+models/exported/*
+!models/maixcam/.gitkeep
+!models/onnx/.gitkeep
+!models/exported/.gitkeep
+datasets/raw/*
+datasets/labeled/*
+datasets/yolo/*
+!datasets/raw/.gitkeep
+!datasets/labeled/.gitkeep
+!datasets/yolo/.gitkeep
+.work/
