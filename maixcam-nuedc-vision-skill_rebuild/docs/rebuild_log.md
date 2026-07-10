@@ -26,10 +26,18 @@ YOLO 模型、数据集、小车视觉任务、机械臂视觉任务和 TASK/ARM
 4. `57d99cd` — rebuild mv protocol and tuning
 5. `a74d5fe` — rebuild stm32 and tmx templates
 6. `e63bb90` — rebuild yolo vehicle arm placeholders
-7. `rebuild docs and safety notes` — 本文档所在阶段；准确哈希以 `git log` 为准
+7. `e354ddd` — rebuild docs and safety notes
 
 备份分支 `backup-before-maixcam-skill-rebuild` 指向重建前提交。
 
 ## 安全边界
 
 当前只允许红色 LED、屏幕/纸面红点等替代测试；不启用 405nm，不使用真实激光，不连接云台、舵机、小车或机械臂执行机构。MaixCAM 永远只输出视觉结果。
+
+## 最终验证
+
+- Skill frontmatter 验证通过（环境未安装 PyYAML，向官方验证脚本进程注入仓库自带 YAML 解析器后执行同一验证逻辑）。
+- 5 个 Python 单元测试通过，`tune.py analyze` 示例通过。
+- 配置解析与 red/405 安全默认值检查通过。
+- C 解析器、目标建议状态机测试及 STM32/MSPM0 示例通过 `-Wall -Wextra -Werror` 主机编译。
+- `maixcam_run_2025E` 相对重建前提交无差异。
