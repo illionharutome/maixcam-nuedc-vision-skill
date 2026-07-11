@@ -1,85 +1,63 @@
 ---
 name: maixcam-tmx-vision-competition
-description: [TODO: Complete and informative explanation of what the skill does and when to use it. Include WHEN to use this skill - specific scenarios, file types, or tasks that trigger it.]
+description: Build, migrate, tune, test, or troubleshoot electronic-design-competition vision systems that use MaixCAM Pro for vision, TianMengXing MSPM0G3507 for control, and DCC-100 dual stepper hardware. Use for MaixPy classical vision or YOLO modules, UART VisionResult integration, MSPM0 DriverLib adapters, MaixVision field debugging, structured replay logs, DeepSeek-assisted threshold tuning, MaixHub training, and competition-day recovery workflows.
 ---
 
-# Maixcam Tmx Vision Competition
+# MaixCAM TMX Vision Competition
 
-## Overview
+## Enforce the architecture
 
-[TODO: 1-2 sentences explaining what this skill enables]
+- Assign vision to MaixCAM Pro, control to TianMengXing MSPM0G3507, and actuation to DCC-100.
+- Treat MSPM0G3507 as the only production controller. Do not introduce STM32 HAL, CubeMX, `HAL_UART`, or an `stm32_bridge` production path.
+- Keep the chain `VisionModule -> VisionResult -> uart_protocol.py -> vision_parser.c -> VisionCommand_t -> gimbal_control.c -> motor_adapter.c -> step_motor.c`.
+- Keep GPIO and Timer operations inside the migrated `step_motor.c`. Keep parsing free of motor control and UART ISRs free of control policy.
 
-## Structuring This Skill
+## Develop vision modules
 
-[TODO: Choose the structure that best fits this skill's purpose. Common patterns:
+1. Reuse an existing module before adding one.
+2. Make the simplest stable method run before optimizing accuracy.
+3. Prefer traditional vision for laser spots, color blobs, lines, rectangles, and circles. Use YOLO for complex classes, digits, or symbols.
+4. Put every tunable parameter in a YAML file. Emit only the shared `VisionResult` mapping from every module.
+5. Generate every outbound string through `maixcam_app/comm/uart_protocol.py`.
+6. Use YOLO for coarse localization and traditional vision inside its ROI when precise center coordinates matter.
 
-**1. Workflow-Based** (best for sequential processes)
-- Works well when there are clear step-by-step procedures
-- Example: DOCX skill with "Workflow Decision Tree" -> "Reading" -> "Creating" -> "Editing"
-- Structure: ## Overview -> ## Workflow Decision Tree -> ## Step 1 -> ## Step 2...
+## Migrate and control DCC-100
 
-**2. Task-Based** (best for tool collections)
-- Works well when the skill offers different operations/capabilities
-- Example: PDF skill with "Quick Start" -> "Merge PDFs" -> "Split PDFs" -> "Extract Text"
-- Structure: ## Overview -> ## Quick Start -> ## Task Category 1 -> ## Task Category 2...
+- Read `controller_tmx_mspm0/dcc_reference_notes.md` before changing motor code.
+- Prefer the supplied 08 dual-axis MSPM0 project, then project 15 for speed/angle semantics, then project 14 for pulse basics. Use `tripod__head-master` only for high-level ideas.
+- Preserve `step_motor_init`, `step_motor_dir_set`, `step_motor_start`, `step_motor_stop`, `step_set_speed`, and `step_motor_set_angle`.
+- Confirm axis mapping, direction, 1/32 microstep mode, soft limits, and zero position without load before closed-loop operation.
+- Stop both axes on low confidence, sustained loss, invalid frames, or receive timeout.
 
-**3. Reference/Guidelines** (best for standards or specifications)
-- Works well for brand guidelines, coding standards, or requirements
-- Example: Brand styling with "Brand Guidelines" -> "Colors" -> "Typography" -> "Features"
-- Structure: ## Overview -> ## Guidelines -> ## Specifications -> ## Usage...
+## Tune safely
 
-**4. Capabilities-Based** (best for integrated systems)
-- Works well when the skill provides multiple interrelated features
-- Example: Product Management with "Core Capabilities" -> numbered capability list
-- Structure: ## Overview -> ## Core Capabilities -> ### 1. Feature -> ### 2. Feature...
+- Use MaixVision only for human observation and overlays. Do not treat its GUI as API input.
+- Collect explicit sampling sessions under `logs/tuning/`; never write every frame during competition mode.
+- Let DeepSeek read only `frames.jsonl`, `metrics.json`, `current_config.yaml`, and `failure_cases.json`.
+- Read `DEEPSEEK_API_KEY` and `DEEPSEEK_MODEL` only from environment variables. Require strict JSON candidate output.
+- Save candidates under `configs/candidates/`, replay them, compute the repository score, and promote only a strictly higher score to `configs/best/current_best.yaml`.
 
-Patterns can be mixed and matched as needed. Most skills combine patterns (e.g., start with task-based, add workflow for complex operations).
+## Operate at the field
 
-Delete this entire "Structuring This Skill" section when done - it's just guidance.]
+1. Photograph wiring and tag the last known-good commit.
+2. Verify camera focus/exposure and MaixVision overlay without motors.
+3. Verify the exact `$MV,...#` frame, 115200 8N1, crossed TX/RX, 3.3V logic, and common ground.
+4. Point-test each DCC axis at low speed without load; confirm inversion and limits.
+5. Run open-loop vision, then closed-loop at conservative speed.
+6. Change one YAML variable group at a time, replay, commit, and keep a rollback point.
+7. Prefer a stable reduced feature set over an unverified architectural rewrite.
 
-## [TODO: Replace with the first main section based on chosen structure]
+## Diagnose common failures
 
-[TODO: Add content here. See examples in existing skills:
-- Code samples for technical skills
-- Decision trees for complex workflows
-- Concrete examples with realistic user requests
-- References to scripts/templates/references as needed]
+- No target: inspect exposure, ROI, threshold mask, minimum area, lens focus, and target pixel size.
+- Jitter: narrow ROI, raise area/circularity filters, lower gain, increase deadband, or extend tracker constraints.
+- Wrong direction: change `invert_pan`/`invert_tilt`; do not swap parser signs opportunistically.
+- Motor stalls/noise: stop immediately; verify 11–26V DCC power, common ground, current setting, microstep mode, speed ramp, and mechanical load.
+- UART garbage: verify 115200 8N1 and ground; avoid UART0 boot logs or rely on `$MV` resynchronization.
+- YOLO mismatch: verify MUD family, labels, output nodes, preprocessing, and MaixPy minimum version.
 
-## Resources (optional)
+## Preserve the repository
 
-Create only the resource directories this skill actually needs. Delete this section if no resources are required.
-
-### scripts/
-Executable code (Python/Bash/etc.) that can be run directly to perform specific operations.
-
-**Examples from other skills:**
-- PDF skill: `fill_fillable_fields.py`, `extract_form_field_info.py` - utilities for PDF manipulation
-- DOCX skill: `document.py`, `utilities.py` - Python modules for document processing
-
-**Appropriate for:** Python scripts, shell scripts, or any executable code that performs automation, data processing, or specific operations.
-
-**Note:** Scripts may be executed without loading into context, but can still be read by Codex for patching or environment adjustments.
-
-### references/
-Documentation and reference material intended to be loaded into context to inform Codex's process and thinking.
-
-**Examples from other skills:**
-- Product management: `communication.md`, `context_building.md` - detailed workflow guides
-- BigQuery: API reference documentation and query examples
-- Finance: Schema documentation, company policies
-
-**Appropriate for:** In-depth documentation, API references, database schemas, comprehensive guides, or any detailed information that Codex should reference while working.
-
-### assets/
-Files not intended to be loaded into context, but rather used within the output Codex produces.
-
-**Examples from other skills:**
-- Brand styling: PowerPoint template files (.pptx), logo files
-- Frontend builder: HTML/React boilerplate project directories
-- Typography: Font files (.ttf, .woff2)
-
-**Appropriate for:** Templates, boilerplate code, document templates, images, icons, fonts, or any files meant to be copied or used in the final output.
-
----
-
-**Not every skill requires all three types of resources.**
+- Commit every coherent change. Push every commit when a remote is configured; otherwise record the reason in `docs/git_remote_todo.md`.
+- Never commit `.env`, API keys, logs, raw datasets, videos, archives, ONNX/MUD/PT weights, or personal data.
+- Run `python scripts/repo_health_check.py` and relevant replay/C tests before handoff.
