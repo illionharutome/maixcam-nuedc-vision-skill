@@ -49,3 +49,11 @@ problems/**/datasets/**/labels/*
 .env
 *.uvoptx
 EventRecorderStub.scvd
+
+# Runtime serial logs
+logs/serial/*.txt
+
+# Keil local/user files
+*.uvoptx
+*EventRecorderStub*
+
