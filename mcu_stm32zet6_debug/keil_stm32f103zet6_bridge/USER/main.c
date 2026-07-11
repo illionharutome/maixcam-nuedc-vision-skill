@@ -6,6 +6,7 @@
 #include "protocol_track1.h"
 #include "manual_tracker_state.h"
 #include "dry_uart_probe.h"
+#include "gimbal_stepper.h"
 
 void vision_debug_bridge_init(void);
 void vision_debug_bridge_rx_byte(uint8_t byte);
@@ -249,6 +250,7 @@ int main(void)
 {
     vision_debug_bridge_init();
     usart1_init();
+    GimbalStepper_Init();
 #if BRIDGE_ENABLE_GIMBAL_DRY_UART
     dry_uart_probe_init();
 #endif
@@ -258,6 +260,47 @@ int main(void)
             g_debug_tx_pending = 0U;
             bridge_debug_print_latest();
         }
+#if GIMBAL_ENABLE_STEPPER_OUTPUT || GIMBAL_DRY_RUN_LOG_ENABLE
+        {
+            static uint32_t stepper_tick;
+            static uint32_t stepper_ms;
+            ++stepper_tick;
+            /* rough ms counter: ~1 tick per main-loop iteration;
+               at ~2M iter/s (8 MHz empty loop) this is approx 0.5 us/tick.
+               Using 500 ticks ≈ 1 ms as a placeholder.
+               Replace with a hardware timer for precision. */
+            if ((stepper_tick % 1000UL) == 0UL) ++stepper_ms;
+
+            if ((stepper_tick % (GIMBAL_CONTROL_PERIOD_MS * 1000UL)) == 0UL) {
+                if (g_debug_packet_kind == DEBUG_PACKET_TRACK1) {
+                    GimbalStepper_ControlFromError(
+                        g_latest_track1.error_x,
+                        g_latest_track1.error_y,
+                        (int)g_latest_track1_command.valid,
+                        stepper_ms);
+                } else {
+                    GimbalStepper_ControlFromError(0, 0, 0, stepper_ms);
+                }
+            }
+#if GIMBAL_DRY_RUN_LOG_ENABLE
+            {
+                static uint32_t log_tick;
+                if ((stepper_tick - log_tick) >= GIMBAL_DRY_RUN_LOG_MS * 1000UL) {
+                    log_tick = stepper_tick;
+                    uart1_tx_str("$DBG,STEPPER,PAN_DEG_S=");
+                    uart1_tx_int((int32_t)(g_stepper_pan_deg_s * 1000.0f));
+                    uart1_tx_str(",TILT_DEG_S=");
+                    uart1_tx_int((int32_t)(g_stepper_tilt_deg_s * 1000.0f));
+                    uart1_tx_str(",VALID=");
+                    uart1_tx_uint(g_latest_track1_command.valid);
+                    uart1_tx_str(",RUN=");
+                    uart1_tx_uint(g_stepper_run_flag);
+                    uart1_tx_str("#\r\n");
+                }
+            }
+#endif
+        }
+#endif
 #if BRIDGE_GIMBAL_DRY_UART_BOOT_TEST
         {
             static uint32_t diag_tick;
@@ -299,6 +342,11 @@ static void usart2_rx_init(void)
             NVIC_ISER1 = (1UL << nvic_bit);
         }
     }
+}
+
+void TIM4_IRQHandler(void)
+{
+    GimbalStepper_Task10usISR();
 }
 
 void USART2_IRQHandler(void)

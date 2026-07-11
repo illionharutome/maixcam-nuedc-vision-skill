@@ -464,6 +464,11 @@
               <FileType>1</FileType>
               <FilePath>..\USER\dry_uart_probe.c</FilePath>
             </File>
+            <File>
+              <FileName>gimbal_stepper.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\USER\gimbal_stepper.c</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>
