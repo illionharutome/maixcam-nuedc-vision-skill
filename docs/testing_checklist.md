@@ -25,3 +25,13 @@
 - [ ] 无 USB-TTL 时，将 MaixVision 控制台原始文本保存为 `logs/serial/manual_maixvision_raw.txt`，运行 `python scripts/tune.py analyze-raw --file logs/serial/manual_maixvision_raw.txt`。
 - [ ] 确认 `analyze-raw` 输出 `total_lines`、`valid_frames`、`skipped_lines` 和十项 AIM 指标。
 - [ ] STM32ZET6 仅观察解析结果；MSPM0G3507 仅观察建议值，不连接执行机构。
+
+## 阶段 2：主控侧空跑验证
+
+- [ ] 不接真实激光、PWM、云台、舵机、小车或机械臂执行机构。
+- [ ] 用模拟 `$MV,AIM` 帧喂给 `mcu_common` C 解析器。
+- [ ] 检查解析后的 `aim_error_x / aim_error_y` 与帧内容一致。
+- [ ] 检查负 x 误差产生负 `pan_command`、正 x 误差产生正 `pan_command`；y 方向同理按当前图像坐标约定检查。
+- [ ] 检查 `NO_SPOT / LOST / ERROR` 时 `valid=0` 且 pan/tilt 建议归零。
+- [ ] 检查 `AIMED` 时进入 locked/stable 状态且 pan/tilt 建议接近 0。
+- [ ] PC C 测试全部通过后，才进入 STM32ZET6 debug bridge 或天猛星实板解析验证；实板阶段仍不接执行机构。

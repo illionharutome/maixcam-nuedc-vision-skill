@@ -31,11 +31,16 @@ void target_aiming_update(const Aim_Result *aim,
         return;
     }
 
-    command->valid = 1U;
     if (strcmp(aim->status, "AIMED") == 0) {
+        command->valid = 1U;
         command->state = TARGET_AIM_LOCKED;
         return;
     }
+    if (strcmp(aim->status, "AIMING") != 0) {
+        command->state = TARGET_AIM_NO_SPOT;
+        return;
+    }
+    command->valid = 1U;
     command->state = TARGET_AIM_TRACKING;
     if (labs((long)aim->aim_error_x) > config->dead_zone_x) {
         command->pan_command = clamp(config->pan_gain * (float)aim->aim_error_x,
