@@ -170,7 +170,7 @@ static void bridge_debug_print_latest(void)
     uart1_tx_str(",PAN="); uart1_tx_milli(g_latest_command.pan_command);
     uart1_tx_str(",TILT=");uart1_tx_milli(g_latest_command.tilt_command);
     uart1_tx_str(",VALID=");uart1_tx_uint((uint32_t)g_latest_command.valid);
-    uart1_tx_str(",STATUS=");uart1_tx_str(g_latest_aim.status);
+    uart1_tx_str(",STATUS=");uart1_tx_str((const char *)g_latest_aim.status);
     uart1_tx_str(",STATE=");uart1_tx_str(state_to_string(g_latest_command.state));
     uart1_tx_str("#\r\n");
 }
