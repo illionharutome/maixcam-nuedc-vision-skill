@@ -19,6 +19,10 @@
 #define BRIDGE_USART1_IRQn    37UL
 #define BRIDGE_USART2_IRQn    38UL
 
+#if (BRIDGE_USE_USART1 == 1) && (BRIDGE_USE_USART2 == 1)
+#error "Only one USART may be enabled at a time (USART1 or USART2)"
+#endif
+
 #if (BRIDGE_USE_USART1 == 0) && (BRIDGE_USE_USART2 == 0)
 #error "At least one USART must be enabled (USART1 or USART2)"
 #endif
