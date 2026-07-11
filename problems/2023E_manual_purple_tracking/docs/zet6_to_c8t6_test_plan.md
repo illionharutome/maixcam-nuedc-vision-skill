@@ -16,10 +16,31 @@
 - 风险：将抽象毫单位误认为角度、速度或脉冲。
 - 安全：无 C8T6、DCC-100 和电机接线；断电方式保持可用。
 
-## 阶段 2A：USART1 GM mirror（单串口验证）
+## 阶段 2A：USART1 GM mirror（单串口验证）— 已通过
 
-当 USART3 不可用时，可先通过 `BRIDGE_ENABLE_GIMBAL_MIRROR_ON_USART1=1` 在 USART1 上同时输出
-`$DBG,TRACK1` 和 `$GM,CMD`，用单串口脚本验证命令生成逻辑。**不是第二物理串口验证，不能代表 C8T6 已可接入。**
+已验证 ZET6 命令生成逻辑正确。通过 `BRIDGE_ENABLE_GIMBAL_MIRROR_ON_USART1=1` 在 USART1 上同时输出
+`$DBG,TRACK1` 和 `$GM,CMD`。
+
+## 阶段 2B：ZET6 多端口 TX 探测
+
+USART3/PB10 未验证成功。已实现多端口 dry UART 探测框架 (`dry_uart_probe.c`)。
+
+可选端口：USART3(PB10), UART4(PC10), UART5(PC12)。
+
+用法：
+```text
+1. bridge_config.h 中设置:
+   BRIDGE_ENABLE_GIMBAL_DRY_UART = 1
+   BRIDGE_GIMBAL_DRY_UART_PORT  = BRIDGE_GIMBAL_DRY_UART_PORT_UART4  (逐端口尝试)
+   BRIDGE_GIMBAL_DRY_UART_BOOT_TEST = 1
+
+2. Build + Download
+3. ZET6 TX -> USB-TTL RX, GND -> GND
+4. python ...listen_gimbal_uart.py --port COM6
+5. 期望看到 $GM,BOOT,PORT=UART4,OK,TICK=...
+```
+
+每个 TX 探测结果记录到测试报告。USART1 mirror (Stage 2A) 仍可用于对比。
 
 ## 阶段 2：第二串口只接 USB-TTL（USART3, PB10）
 

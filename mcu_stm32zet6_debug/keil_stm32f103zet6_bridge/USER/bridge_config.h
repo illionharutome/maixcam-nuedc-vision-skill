@@ -32,24 +32,32 @@
 #error "Invalid baud rate configuration"
 #endif
 
-/* Stage 2 dry-run gimbal UART output (USART3 TX only, PB10).
-   Default 0: no gimbal UART code is compiled.
-   Change to 1 locally for USB-TTL verification. Never push as 1. */
-#define BRIDGE_ENABLE_GIMBAL_DRY_UART  0
-#define BRIDGE_GIMBAL_UART_BAUD        115200UL
+/* --------------------------------------------------------------------------
+   Stage 2 dry-run gimbal UART output — multi-port probe framework.
+   All defaults are OFF / NONE.  Never push a non-zero / non-NONE value.
+   -------------------------------------------------------------------------- */
+#define BRIDGE_ENABLE_GIMBAL_DRY_UART      0
+#define BRIDGE_GIMBAL_UART_BAUD            115200UL
 
-/* Boot self-test: send $GM,BOOT,USART3,OK# once at startup via USART3.
-   Default 0. Set to 1 locally together with BRIDGE_ENABLE_GIMBAL_DRY_UART=1
-   to confirm physical USART3 link without needing a TRACK1 frame. */
-#define BRIDGE_GIMBAL_DRY_UART_BOOT_TEST  0
+/* Port selection (only one may be non-zero at a time when DRY_UART=1). */
+#define BRIDGE_GIMBAL_DRY_UART_PORT_NONE    0
+#define BRIDGE_GIMBAL_DRY_UART_PORT_USART3  3
+#define BRIDGE_GIMBAL_DRY_UART_PORT_UART4   4
+#define BRIDGE_GIMBAL_DRY_UART_PORT_UART5   5
 
-/* Stage 2A: mirror $GM,CMD on USART1 (alongside $DBG,TRACK1).
-   Default 0. Set to 1 locally to verify command generation without USART3.
-   Does NOT control any hardware, C8T6, PWM, or actuator. */
-#define BRIDGE_ENABLE_GIMBAL_MIRROR_ON_USART1  0
+#define BRIDGE_GIMBAL_DRY_UART_PORT  BRIDGE_GIMBAL_DRY_UART_PORT_NONE
 
 #if BRIDGE_ENABLE_GIMBAL_DRY_UART
 #define BRIDGE_GIMBAL_UART_BRR  ((BRIDGE_PCLK1_HZ + (BRIDGE_GIMBAL_UART_BAUD / 2UL)) / BRIDGE_GIMBAL_UART_BAUD)
 #endif
+
+/* Boot self-test: send $GM,BOOT,PORT=<name>,OK,TICK=<n># periodically.
+   Default 0.  Set to 1 locally for TX-pin probing. */
+#define BRIDGE_GIMBAL_DRY_UART_BOOT_TEST   0
+
+/* Stage 2A: mirror $GM,CMD on USART1 (alongside $DBG,TRACK1).
+   Default 0.  Use to verify command generation without a second serial port.
+   Does NOT control any hardware, C8T6, PWM, or actuator. */
+#define BRIDGE_ENABLE_GIMBAL_MIRROR_ON_USART1  0
 
 #endif

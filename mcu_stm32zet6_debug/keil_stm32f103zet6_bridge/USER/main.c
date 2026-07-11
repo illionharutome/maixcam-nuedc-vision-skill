@@ -5,7 +5,7 @@
 #include "target_aiming_state_machine.h"
 #include "protocol_track1.h"
 #include "manual_tracker_state.h"
-#include "usart_gimbal_dry.h"
+#include "dry_uart_probe.h"
 
 void vision_debug_bridge_init(void);
 void vision_debug_bridge_rx_byte(uint8_t byte);
@@ -191,7 +191,7 @@ static void bridge_debug_print_latest(void)
         uart1_tx_str("\r\n");
 #endif
 #if BRIDGE_ENABLE_GIMBAL_DRY_UART
-        gimbal_dry_uart_send_str(g_latest_gimbal_dry_run);
+        dry_uart_probe_send_str(g_latest_gimbal_dry_run);
 #endif
         return;
     }
@@ -250,7 +250,7 @@ int main(void)
     vision_debug_bridge_init();
     usart1_init();
 #if BRIDGE_ENABLE_GIMBAL_DRY_UART
-    gimbal_dry_uart_init();
+    dry_uart_probe_init();
 #endif
 
     for (;;) {
@@ -264,13 +264,13 @@ int main(void)
             ++diag_tick;
             if (diag_tick >= 2000000UL) {
                 diag_tick = 0UL;
-                uart1_tx_str("$DBG,GMUART,EN=1,BOOT=");
-                uart1_tx_uint(g_gimbal_boot_sent);
+                uart1_tx_str("$DBG,GMUART,PORT=");
+                uart1_tx_str(port_name);
                 uart1_tx_str(",TX_COUNT=");
                 uart1_tx_uint(g_gimbal_tx_count);
                 uart1_tx_str("#\r\n");
             }
-            gimbal_dry_uart_boot_send();
+            dry_uart_probe_boot_tick(diag_tick);
         }
 #endif
     }
