@@ -1,3 +1,3 @@
-from apps_atomic.app_aim_error_demo import main
+from apps_replay import run_2025e_target_aiming
 
-main()
+run_2025e_target_aiming()

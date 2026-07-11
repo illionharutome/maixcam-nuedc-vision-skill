@@ -1,4 +1,4 @@
-"""Record and analyze `$MV,AIM` serial logs without changing configuration."""
+"""Record and analyze `$MV,AIM` serial or copied MaixVision logs."""
 
 import argparse
 import json
@@ -124,7 +124,7 @@ def _std(values):
     return statistics.pstdev(values) if values else 0.0
 
 
-def analyze_rows(rows, source_name="<memory>"):
+def analyze_rows(rows, source_name="<memory>", line_counts=None):
     errors_x = _numbers(rows, "aim_error_x")
     errors_y = _numbers(rows, "aim_error_y")
     fps = _numbers(rows, "fps")
@@ -140,8 +140,15 @@ def analyze_rows(rows, source_name="<memory>"):
         "fps_avg": _avg(fps),
         "fps_min": min(fps) if fps else 0.0,
     }
+    if line_counts:
+        result.update(line_counts)
     print("source=%s" % source_name)
-    print("frames=%d" % len(rows))
+    if line_counts:
+        print("total_lines=%d" % line_counts["total_lines"])
+        print("valid_frames=%d" % line_counts["valid_frames"])
+        print("skipped_lines=%d" % line_counts["skipped_lines"])
+    else:
+        print("frames=%d" % len(rows))
     for key in (
         "ok_rate", "aimed_rate", "no_board_rate", "no_spot_rate",
         "aim_error_x_avg", "aim_error_y_avg", "aim_error_x_std",
@@ -182,6 +189,37 @@ def analyze_log(path=None):
     return analyze_rows(rows, path)
 
 
+def analyze_raw_log(path):
+    """Analyze AIM frames copied verbatim from the MaixVision console."""
+    rows = []
+    total_lines = 0
+    try:
+        with open(path, "r", encoding="utf-8-sig", errors="replace") as handle:
+            for line in handle:
+                total_lines += 1
+                text = line.strip()
+                start = text.find("$MV,AIM,")
+                if start < 0 or not text.endswith("#"):
+                    continue
+                packet = text[start:]
+                try:
+                    result = parse_mv_packet(packet)
+                except (UnicodeError, ValueError):
+                    continue
+                if result.mode != "AIM":
+                    continue
+                rows.append(_row_from_result(result))
+    except OSError as exc:
+        raise RuntimeError("Cannot read raw MaixVision log %s: %s" % (path, exc)) from exc
+
+    counts = {
+        "total_lines": total_lines,
+        "valid_frames": len(rows),
+        "skipped_lines": total_lines - len(rows),
+    }
+    return analyze_rows(rows, path, line_counts=counts)
+
+
 def build_parser():
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -191,6 +229,10 @@ def build_parser():
     log_parser.add_argument("--seconds", type=float, default=30.0)
     analyze_parser = subparsers.add_parser("analyze", help="analyze a JSONL log")
     analyze_parser.add_argument("--file", help="JSONL file; defaults to the newest serial log")
+    raw_parser = subparsers.add_parser(
+        "analyze-raw", help="analyze raw text copied from the MaixVision console"
+    )
+    raw_parser.add_argument("--file", required=True, help="raw MaixVision console text file")
     return parser
 
 
@@ -201,8 +243,10 @@ def main(argv=None):
             if args.seconds <= 0:
                 raise RuntimeError("--seconds must be greater than zero")
             log_serial(args.port, args.baud, args.seconds)
-        else:
+        elif args.command == "analyze":
             analyze_log(args.file)
+        else:
+            analyze_raw_log(args.file)
     except RuntimeError as exc:
         print("ERROR: %s" % exc, file=sys.stderr)
         return 2
