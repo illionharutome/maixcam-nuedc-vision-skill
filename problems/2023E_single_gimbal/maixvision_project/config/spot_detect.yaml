@@ -1,0 +1,1 @@
+{"enabled":true,"profile":"safe_visible_red","lab_threshold":[0,100,25,127,-20,100],"roi":[],"area_threshold":3,"pixels_threshold":3,"min_density":0.2,"score_pixels":20,"merge":false,"field_calibration_required":true,"405nm_enabled":false}

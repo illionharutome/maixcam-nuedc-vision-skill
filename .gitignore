@@ -34,3 +34,18 @@ datasets/yolo/*
 **/Listings/
 **/DebugConfig/
 tests/*.exe
+**/tests/*.exe
+
+# Per-problem generated artifacts and secrets
+problems/**/logs/*.jsonl
+problems/**/logs/*.png
+problems/**/datasets/**/raw/*
+problems/**/datasets/**/labels/*
+!problems/**/datasets/**/raw/.gitkeep
+!problems/**/datasets/**/labels/.gitkeep
+*.pth
+*.pt
+*.onnx
+.env
+*.uvoptx
+EventRecorderStub.scvd
