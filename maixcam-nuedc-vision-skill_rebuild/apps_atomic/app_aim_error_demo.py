@@ -15,7 +15,7 @@ from vision.laser_spot_detect import detect_laser_spot
 from vision.target_board_detect import detect_target_board
 
 
-def run_loop():
+def main():
     from maix import app, camera, display, image, time, uart
 
     camera_config = load_config("camera.yaml")
@@ -44,5 +44,9 @@ def run_loop():
         serial.close()
 
 
+# Backward-compatible name used by the 2025E replay wrapper.
+run_loop = main
+
+
 if __name__ == "__main__":
-    run_loop()
+    main()
