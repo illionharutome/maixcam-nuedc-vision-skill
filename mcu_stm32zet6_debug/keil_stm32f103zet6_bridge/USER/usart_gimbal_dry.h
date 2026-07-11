@@ -2,7 +2,7 @@
 #define USART_GIMBAL_DRY_H
 
 /*
- * Stage 2 gimbal dry-run UART: TX-only USART2 (PA2) for USB-TTL monitoring.
+ * Stage 2 gimbal dry-run UART: TX-only USART3 (PB10) for USB-TTL monitoring.
  * When BRIDGE_ENABLE_GIMBAL_DRY_UART=0 the entire module compiles to nothing.
  */
 

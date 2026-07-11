@@ -19,7 +19,9 @@
 ## 阶段 2：第二串口只接 USB-TTL（已实现）
 
 固件侧：`USER/bridge_config.h` 中 `BRIDGE_ENABLE_GIMBAL_DRY_UART=0`（仓库默认），
-USART2_TX (PA2) → USB-TTL RX，代码已就绪。
+USART3_TX (PB10) → USB-TTL RX，代码已就绪。
+
+> 接线前核对板卡原理图/丝印，确认 PB10 未被其他外设占用。
 
 测试脚本：`problems/2023E_manual_purple_tracking/scripts/stm32_gimbal_dry_uart_check.py`
 
@@ -29,7 +31,7 @@ python problems\2023E_manual_purple_tracking\scripts\stm32_gimbal_dry_uart_check
 ```
 
 - 动作：用户本地改 `BRIDGE_ENABLE_GIMBAL_DRY_UART` 为 1，Build，烧录；
-  PA2 接 USB-TTL RX，GND 共地；PC 串口助手或双串口脚本观察 `$GM,CMD`。
+  PB10 接 USB-TTL RX，GND 共地；PC 串口助手或双串口脚本观察 `$GM,CMD`。
   C8T6 不接线。
 - 退出条件：TRACKING/AIMED/STOP mode 输出正确，USART1 AIM/TRACK1 回归继续 PASS。
 - 风险：选错引脚/电平、串口资源冲突、消息风暴。

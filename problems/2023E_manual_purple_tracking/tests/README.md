@@ -6,4 +6,4 @@ Python helper test validates TRACK1 serialization and DBG parsing. Host C test c
 
 `test_track1_mcu.c` 验证 TRACK1 parser 半帧/粘包/超长帧丢弃、追踪状态机 AIMED 归零、gimbal 命令字符串 mode 过滤和缓冲区安全。
 
-Stage 2 双串口验证：`../scripts/stm32_gimbal_dry_uart_check.py`。
+Stage 2 双串口验证（USART3 PB10 TX → USB-TTL）：`../scripts/stm32_gimbal_dry_uart_check.py`。

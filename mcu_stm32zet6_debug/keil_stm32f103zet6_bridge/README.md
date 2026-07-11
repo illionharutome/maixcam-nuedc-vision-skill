@@ -170,7 +170,7 @@ python problems\2023E_manual_purple_tracking\scripts\stm32_track1_auto_check.py 
 
 若轴符号配置改变，可附加 `--sign-x -1` 或 `--sign-y -1`。脚本只收发 USART1 debug 文本，不连接执行机构。
 
-## Stage 2: gimbal dry UART (USART2 TX to USB-TTL)
+## Stage 2: gimbal dry UART (USART3 TX to USB-TTL)
 
 ### 宏配置
 
@@ -186,16 +186,19 @@ python problems\2023E_manual_purple_tracking\scripts\stm32_track1_auto_check.py 
 ### 接线
 
 ```text
-ZET6 PA2 (USART2_TX)  -->  USB-TTL 模块 RX
-ZET6 GND               -->  USB-TTL 模块 GND
+ZET6 PB10 (USART3_TX)  -->  USB-TTL 模块 RX
+ZET6 GND                -->  USB-TTL 模块 GND
 ```
+
+> 接线前核对板卡原理图/丝印，确认 PB10 未被其他外设占用。
+> 若 PB10 不可用，需根据实际板卡另选引脚并修改代码。
 
 **绝对不接 C8T6、DCC-100、步进电机、舵机或任何执行机构。**
 USB-TTL 模块的另一端是 PC 串口助手或双串口脚本。
 
 ### 行为
 
-当 `BRIDGE_ENABLE_GIMBAL_DRY_UART = 1` 且收到有效 TRACK1 帧时，ZET6 通过 USART2_TX (PA2) 发送：
+当 `BRIDGE_ENABLE_GIMBAL_DRY_UART = 1` 且收到有效 TRACK1 帧时，ZET6 通过 USART3_TX (PB10) 发送：
 
 - TRACKING：`$GM,CMD,PAN=...,TILT=...,MODE=TRACK#`
 - AIMED/deadband：`$GM,CMD,PAN=0,TILT=0,MODE=AIMED#`
@@ -216,7 +219,7 @@ python problems\2023E_manual_purple_tracking\scripts\stm32_track1_auto_check.py 
 python problems\2023E_manual_purple_tracking\scripts\stm32_gimbal_dry_uart_check.py --debug-port COM5 --gimbal-port COM7
 ```
 
-`--debug-port` 是 Type-C COM 口（USART1），`--gimbal-port` 是 USB-TTL COM 口（USART2_TX）。
+`--debug-port` 是 Type-C COM 口（USART1），`--gimbal-port` 是 USB-TTL COM 口（USART3_TX）。
 
 ---
 

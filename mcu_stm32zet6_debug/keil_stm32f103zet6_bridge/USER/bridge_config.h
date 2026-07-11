@@ -32,7 +32,7 @@
 #error "Invalid baud rate configuration"
 #endif
 
-/* Stage 2 dry-run gimbal UART output (USART2 TX only, PA2).
+/* Stage 2 dry-run gimbal UART output (USART3 TX only, PB10).
    Default 0: no gimbal UART code is compiled.
    Change to 1 locally for USB-TTL verification. Never push as 1. */
 #define BRIDGE_ENABLE_GIMBAL_DRY_UART  0
