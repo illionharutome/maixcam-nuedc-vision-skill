@@ -58,15 +58,23 @@ void vision_debug_bridge_rx_byte(uint8_t byte)
         g_debug_tx_pending = 1U;
     }
     if (track1_stream_push(&g_track1_parser, (char)byte, &track1) == TRACK1_PACKET) {
+        const char *gm_mode;
         tracker = g_latest_track1_command;
         manual_tracker_update(&tracker, &track1, &g_debug_track1_config);
         g_latest_track1 = track1;
         g_latest_track1_command = tracker;
+        if (!tracker.valid) {
+            gm_mode = "STOP";
+        } else if (tracker.state == MANUAL_AIMED) {
+            gm_mode = "AIMED";
+        } else {
+            gm_mode = "TRACK";
+        }
         (void)gimbal_board_format_dry_run(g_latest_gimbal_dry_run,
                                           sizeof(g_latest_gimbal_dry_run),
                                           (int)tracker.pan_command,
                                           (int)tracker.tilt_command,
-                                          "TRACK");
+                                          gm_mode);
         g_debug_packet_kind = DEBUG_PACKET_TRACK1;
         g_debug_tx_pending = 1U;
     }

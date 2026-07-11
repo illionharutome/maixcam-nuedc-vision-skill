@@ -5,6 +5,7 @@
 #include "target_aiming_state_machine.h"
 #include "protocol_track1.h"
 #include "manual_tracker_state.h"
+#include "usart_gimbal_dry.h"
 
 void vision_debug_bridge_init(void);
 void vision_debug_bridge_rx_byte(uint8_t byte);
@@ -183,6 +184,9 @@ static void bridge_debug_print_latest(void)
         uart1_tx_str(",STATUS=");uart1_tx_str((const char *)g_latest_track1.status);
         uart1_tx_str(",STATE=");uart1_tx_str(manual_state_name(g_latest_track1_command.state));
         uart1_tx_str("#\r\n");
+#if BRIDGE_ENABLE_GIMBAL_DRY_UART
+        gimbal_dry_uart_send_str(g_latest_gimbal_dry_run);
+#endif
         return;
     }
 
@@ -239,6 +243,9 @@ int main(void)
 {
     vision_debug_bridge_init();
     usart1_init();
+#if BRIDGE_ENABLE_GIMBAL_DRY_UART
+    gimbal_dry_uart_init();
+#endif
 
     for (;;) {
         if (g_debug_tx_pending != 0U) {

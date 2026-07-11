@@ -23,4 +23,6 @@ int gimbal_board_build_command(int pan_milli, int tilt_milli,
 
 它只格式化 `$GM,CMD,PAN=...,TILT=...,MODE=...#`，拒绝包含协议分隔符的 mode。模块没有 UART 发送函数、外设初始化或执行输出。
 
-未来若批准串口实验，USART1 继续服务 PC debug；USART2/3 先只连接 USB-TTL 到 PC 观察。不得把当前字符串直接发送给 C8T6，因为 C8T6 原始固件尚无 UART parser 或明确协议。详细阶段门禁见 `docs/zet6_to_c8t6_test_plan.md`。
+未来若批准串口实验，USART1 继续服务 PC debug；USART2/3 先只连接 USB-TTL 到 PC 观察。不得把当前字符串直接发送给 C8T6，因为 C8T6 原始固件尚无 UART parser 或明确协议。
+
+Stage 2 固件已完成：`BRIDGE_ENABLE_GIMBAL_DRY_UART` 宏（默认 0）控制 USART2 PA2 TX。启用后 TRACKING→`MODE=TRACK`，AIMED→`MODE=AIMED`，LOST/ERROR/NO_TARGET→`MODE=STOP`。详细阶段门禁见 `docs/zet6_to_c8t6_test_plan.md`。

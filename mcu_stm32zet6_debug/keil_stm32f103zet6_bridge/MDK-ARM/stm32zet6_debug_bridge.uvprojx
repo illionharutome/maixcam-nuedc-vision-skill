@@ -459,6 +459,11 @@
               <FileType>1</FileType>
               <FilePath>..\..\..\problems\2023E_manual_purple_tracking\mcu_stm32zet6\gimbal_board_interface.c</FilePath>
             </File>
+            <File>
+              <FileName>usart_gimbal_dry.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\USER\usart_gimbal_dry.c</FilePath>
+            </File>
           </Files>
         </Group>
       </Groups>

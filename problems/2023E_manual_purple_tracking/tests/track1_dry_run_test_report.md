@@ -10,6 +10,8 @@
 4. `tune_manual_tracking.py` 本地日志分析通过。
 5. STM32ZET6 已完成 Build、烧录，原 `$MV,AIM` 回归自动验证 PASS。
 6. STM32ZET6 `$MV,TRACK1` dry-run 四帧自动验证 PASS，包括左上、右下、NO_TARGET 和 AIMED。
+   AIMED 帧已验证 `pan_command=0, tilt_command=0`。
+   `$GM,CMD,...` 字符串 mode 字段已验证：TRACKING→TRACK, AIMED→AIMED, NO_TARGET/LOST/ERROR→STOP。
 
 ## 复现命令
 

@@ -16,10 +16,22 @@
 - 风险：将抽象毫单位误认为角度、速度或脉冲。
 - 安全：无 C8T6、DCC-100 和电机接线；断电方式保持可用。
 
-## 阶段 2：第二串口只接 USB-TTL
+## 阶段 2：第二串口只接 USB-TTL（已实现）
 
-- 动作：另立任务为 ZET6 USART2/3 增加默认禁用的 TX；只接 USB-TTL 到 PC 串口助手观察，C8T6 不接线。
-- 退出条件：波特率、电平、帧边界、发送频率、超时归零帧和 USART1 AIM/TRACK1 回归全部通过。
+固件侧：`USER/bridge_config.h` 中 `BRIDGE_ENABLE_GIMBAL_DRY_UART=0`（仓库默认），
+USART2_TX (PA2) → USB-TTL RX，代码已就绪。
+
+测试脚本：`problems/2023E_manual_purple_tracking/scripts/stm32_gimbal_dry_uart_check.py`
+
+用法：
+```text
+python problems\2023E_manual_purple_tracking\scripts\stm32_gimbal_dry_uart_check.py --debug-port COM5 --gimbal-port COM7
+```
+
+- 动作：用户本地改 `BRIDGE_ENABLE_GIMBAL_DRY_UART` 为 1，Build，烧录；
+  PA2 接 USB-TTL RX，GND 共地；PC 串口助手或双串口脚本观察 `$GM,CMD`。
+  C8T6 不接线。
+- 退出条件：TRACKING/AIMED/STOP mode 输出正确，USART1 AIM/TRACK1 回归继续 PASS。
 - 风险：选错引脚/电平、串口资源冲突、消息风暴。
 - 安全：USB-TTL 与 ZET6 正确共地，电机电源保持断开，有立即拔线/断电方式。
 
