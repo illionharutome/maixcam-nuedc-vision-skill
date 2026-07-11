@@ -23,6 +23,10 @@
 #error "At least one USART must be enabled (USART1 or USART2)"
 #endif
 
+#if (BRIDGE_USE_USART1 == 1) && (BRIDGE_USE_USART2 == 1)
+#error "Only one USART may be enabled at a time (USART1 or USART2)"
+#endif
+
 #if ((BRIDGE_USE_USART1 && (BRIDGE_USART1_BRR == 0UL)) || \
      (BRIDGE_USE_USART2 && (BRIDGE_USART2_BRR == 0UL)))
 #error "Invalid baud rate configuration"
