@@ -1,5 +1,6 @@
 #ifndef USART_GIMBAL_DRY_H
 #define USART_GIMBAL_DRY_H
+#include <stdint.h>
 
 /*
  * Stage 2 gimbal dry-run UART: TX-only USART3 (PB10) for USB-TTL monitoring.

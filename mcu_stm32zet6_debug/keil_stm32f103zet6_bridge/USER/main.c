@@ -186,6 +186,10 @@ static void bridge_debug_print_latest(void)
         uart1_tx_str(",STATUS=");uart1_tx_str((const char *)g_latest_track1.status);
         uart1_tx_str(",STATE=");uart1_tx_str(manual_state_name(g_latest_track1_command.state));
         uart1_tx_str("#\r\n");
+#if BRIDGE_ENABLE_GIMBAL_MIRROR_ON_USART1
+        uart1_tx_str(g_latest_gimbal_dry_run);
+        uart1_tx_str("\r\n");
+#endif
 #if BRIDGE_ENABLE_GIMBAL_DRY_UART
         gimbal_dry_uart_send_str(g_latest_gimbal_dry_run);
 #endif

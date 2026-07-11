@@ -240,6 +240,39 @@ python problems\2023E_manual_purple_tracking\scripts\stm32_gimbal_dry_uart_check
 
 > 完成后将两个宏都改回 0，不要提交 BOOT_TEST=1 的配置。
 
+## Stage 2A: USART1 GM mirror dry-run
+
+当 USART3/PB10 输出不可用或尚未确认时，可通过 USART1 镜像验证 `$GM,CMD` 生成逻辑。
+
+### 宏
+
+```c
+#define BRIDGE_ENABLE_GIMBAL_MIRROR_ON_USART1  0   /* 仓库默认关闭 */
+```
+
+### 用法
+
+```text
+1. 本地临时改为 1
+2. Keil Build + 烧录
+3. 使用同一个 Type-C COM 口:
+
+python problems\2023E_manual_purple_tracking\scripts\stm32_gimbal_mirror_usart1_check.py --port COM5
+```
+
+### 行为
+
+收到 TRACK1 帧时，USART1 先输出 `$DBG,TRACK1` 再输出 `$GM,CMD`。AIM 帧不触发 GM 输出。
+
+### 限制
+
+- 不是第二物理串口验证
+- 不能代表 C8T6 已可接入
+- 只能用于验证 `$GM,CMD` 文本生成
+- 不接 C8T6/DCC-100/电机/PWM/激光/405nm
+
+> 完成后将宏改回 0。
+
 ---
 
 ## 自动串口验证

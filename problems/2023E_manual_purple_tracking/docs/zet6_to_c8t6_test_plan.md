@@ -16,7 +16,12 @@
 - 风险：将抽象毫单位误认为角度、速度或脉冲。
 - 安全：无 C8T6、DCC-100 和电机接线；断电方式保持可用。
 
-## 阶段 2：第二串口只接 USB-TTL（已实现）
+## 阶段 2A：USART1 GM mirror（单串口验证）
+
+当 USART3 不可用时，可先通过 `BRIDGE_ENABLE_GIMBAL_MIRROR_ON_USART1=1` 在 USART1 上同时输出
+`$DBG,TRACK1` 和 `$GM,CMD`，用单串口脚本验证命令生成逻辑。**不是第二物理串口验证，不能代表 C8T6 已可接入。**
+
+## 阶段 2：第二串口只接 USB-TTL（USART3, PB10）
 
 固件侧：`USER/bridge_config.h` 中 `BRIDGE_ENABLE_GIMBAL_DRY_UART=0`（仓库默认），
 USART3_TX (PB10) → USB-TTL RX，代码已就绪。

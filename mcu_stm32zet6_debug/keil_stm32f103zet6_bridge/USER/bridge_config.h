@@ -43,6 +43,11 @@
    to confirm physical USART3 link without needing a TRACK1 frame. */
 #define BRIDGE_GIMBAL_DRY_UART_BOOT_TEST  0
 
+/* Stage 2A: mirror $GM,CMD on USART1 (alongside $DBG,TRACK1).
+   Default 0. Set to 1 locally to verify command generation without USART3.
+   Does NOT control any hardware, C8T6, PWM, or actuator. */
+#define BRIDGE_ENABLE_GIMBAL_MIRROR_ON_USART1  0
+
 #if BRIDGE_ENABLE_GIMBAL_DRY_UART
 #define BRIDGE_GIMBAL_UART_BRR  ((BRIDGE_PCLK1_HZ + (BRIDGE_GIMBAL_UART_BAUD / 2UL)) / BRIDGE_GIMBAL_UART_BAUD)
 #endif
