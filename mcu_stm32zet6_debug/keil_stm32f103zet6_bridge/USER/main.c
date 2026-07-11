@@ -262,37 +262,47 @@ int main(void)
         }
 #if GIMBAL_ENABLE_STEPPER_OUTPUT || GIMBAL_DRY_RUN_LOG_ENABLE
         {
-            static uint32_t stepper_tick;
-            static uint32_t stepper_ms;
-            ++stepper_tick;
-            /* rough ms counter: ~1 tick per main-loop iteration;
-               at ~2M iter/s (8 MHz empty loop) this is approx 0.5 us/tick.
-               Using 500 ticks ≈ 1 ms as a placeholder.
-               Replace with a hardware timer for precision. */
-            if ((stepper_tick % 1000UL) == 0UL) ++stepper_ms;
+            static uint32_t last_control_tick;
+            uint32_t now = g_gimbal_tick10us;
+            int32_t pan_cmd, tilt_cmd;
+            int valid;
 
-            if ((stepper_tick % (GIMBAL_CONTROL_PERIOD_MS * 1000UL)) == 0UL) {
+            /* 20 ms control period from hardware tick */
+            if ((uint32_t)(now - last_control_tick) >= GIMBAL_CONTROL_TICKS) {
+                last_control_tick = now;
+
                 if (g_debug_packet_kind == DEBUG_PACKET_TRACK1) {
-                    GimbalStepper_ControlFromError(
-                        g_latest_track1.error_x,
-                        g_latest_track1.error_y,
-                        (int)g_latest_track1_command.valid,
-                        stepper_ms);
+                    pan_cmd  = g_latest_track1_command.pan_command;
+                    tilt_cmd = g_latest_track1_command.tilt_command;
+                    valid    = (int)g_latest_track1_command.valid;
                 } else {
-                    GimbalStepper_ControlFromError(0, 0, 0, stepper_ms);
+                    pan_cmd = 0; tilt_cmd = 0; valid = 0;
                 }
+
+                /* timeout: stop if TRACK1 not seen recently */
+                {
+                    static uint32_t last_valid_tick;
+                    if (valid) last_valid_tick = now;
+                    if ((uint32_t)(now - last_valid_tick) > GIMBAL_TIMEOUT_TICKS) {
+                        valid = 0;
+                        GimbalStepper_StopAll();
+                    }
+                }
+
+                GimbalStepper_ControlFromCommand(pan_cmd, tilt_cmd, valid);
             }
+
 #if GIMBAL_DRY_RUN_LOG_ENABLE
             {
                 static uint32_t log_tick;
-                if ((stepper_tick - log_tick) >= GIMBAL_DRY_RUN_LOG_MS * 1000UL) {
-                    log_tick = stepper_tick;
+                if ((uint32_t)(now - log_tick) >= GIMBAL_DRY_RUN_LOG_MS * 100UL) {
+                    log_tick = now;
                     uart1_tx_str("$DBG,STEPPER,PAN_DEG_S=");
-                    uart1_tx_int((int32_t)(g_stepper_pan_deg_s * 1000.0f));
+                    uart1_tx_int(g_stepper_pan_degs_milli);
                     uart1_tx_str(",TILT_DEG_S=");
-                    uart1_tx_int((int32_t)(g_stepper_tilt_deg_s * 1000.0f));
+                    uart1_tx_int(g_stepper_tilt_degs_milli);
                     uart1_tx_str(",VALID=");
-                    uart1_tx_uint(g_latest_track1_command.valid);
+                    uart1_tx_uint((uint32_t)valid);
                     uart1_tx_str(",RUN=");
                     uart1_tx_uint(g_stepper_run_flag);
                     uart1_tx_str("#\r\n");

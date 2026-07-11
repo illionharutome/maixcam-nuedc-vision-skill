@@ -3,7 +3,7 @@
 
 #define REG32(addr) (*(volatile uint32_t *)(addr))
 
-/* ---- local register interface (duplicated for independence) ---- */
+/* ---- local registers ---- */
 #define RCC_BASE            0x40021000UL
 #define RCC_APB2ENR         REG32(RCC_BASE + 0x18UL)
 #define RCC_APB1ENR         REG32(RCC_BASE + 0x1CUL)
@@ -14,57 +14,45 @@
 #define GPIOB_CRH           REG32(GIMBAL_GPIO_BASE + 0x04UL)
 #define GPIOB_ODR           REG32(GIMBAL_GPIO_BASE + 0x0CUL)
 
-/* NVIC */
 #define NVIC_ISER0          REG32(0xE000E100UL)
 
 /* ---- globals ---- */
-volatile uint8_t g_stepper_run_flag;
-volatile float   g_stepper_pan_deg_s;
-volatile float   g_stepper_tilt_deg_s;
+volatile uint32_t g_gimbal_tick10us;
+volatile uint8_t  g_stepper_run_flag;
+volatile int32_t  g_stepper_pan_degs_milli;
+volatile int32_t  g_stepper_tilt_degs_milli;
 
-/* ---- per-axis state ---- */
+/* ---- per-axis state (all integer inside ISR) ---- */
 typedef struct {
-    uint8_t  dir_high;       /* 1 = DIR pin currently high */
-    float    target_deg_s;   /* signed target speed */
-    float    current_deg_s;  /* smoothed instantaneous */
-    uint32_t half_period_us; /* half pulse period in us */
-    uint32_t accum;          /* 10 us accumulator */
-    uint8_t  step_level;     /* current STEP pin state (0/1) */
-    uint8_t  pin_step;
-    uint8_t  pin_dir;
-    float    alpha;          /* smoothing factor */
+    int8_t   dir_sign;          /* +1 or -1 as set by PAN/TILT_DIR_SIGN */
+    uint32_t half_period_ticks; /* half pulse period in 10us units, pre-computed */
+    uint32_t accum;             /* 10us accumulator */
+    uint8_t  step_level;        /* current STEP pin state (0/1) */
+    uint8_t  pin_step_mask;     /* BSRR SET bit mask for this axis */
+    uint8_t  pin_dir_mask;      /* BSRR SET bit mask */
+    uint8_t  dir_pending;       /* 1 = direction change requested, axes stopped */
+    uint8_t  dir_want_high;     /* new DIR level after pending resolved */
+    float    target_deg_s;      /* commanded speed (float, set from 20ms loop) */
 } StepperAxis;
 
 static StepperAxis g_pan, g_tilt;
 
-/* ---- timeout state ---- */
-static uint32_t g_last_valid_ms;
-static uint8_t  g_timeout_active;
+/* ---- helpers ---- */
+static uint32_t abs_i32(int32_t v) { return (uint32_t)(v < 0 ? -v : v); }
 
-/* ---- direction helpers ---- */
-static uint32_t dir_set(GimbalAxis axis, int high) {
-    uint8_t pin = (axis == GIMBAL_AXIS_PAN) ? GIMBAL_PIN_PAN_DIR : GIMBAL_PIN_TILT_DIR;
-    return high ? GIMBAL_BS_SET(pin) : GIMBAL_BS_RESET(pin);
-}
-
-static void update_dir_pin(GimbalAxis axis, StepperAxis *a, float target) {
-    int want_high;
-    int sign = (axis == GIMBAL_AXIS_PAN) ? PAN_DIR_SIGN : TILT_DIR_SIGN;
-    if (target > 0.0f)
-        want_high = (sign > 0) ? 1 : 0;
-    else if (target < 0.0f)
-        want_high = (sign > 0) ? 0 : 1;
-    else
-        return;  /* zero speed – keep current DIR */
-
-    if (a->dir_high != (uint8_t)want_high) {
-        a->dir_high = (uint8_t)want_high;
-        GIMBAL_GPIO_BSRR = dir_set(axis, want_high);
+static void stepper_stop_axis(StepperAxis *a, uint32_t *bsrr) {
+    if (a->step_level) {
+        *bsrr |= ((uint32_t)a->pin_step_mask) << 16U;  /* RESET = LOW */
+        a->step_level = 0;
     }
+    a->accum          = 0;
+    a->target_deg_s   = 0.0f;
+    a->half_period_ticks = 0;
+    a->dir_pending    = 0;
 }
 
 /* ================================================================
-   Initialisation
+   Init – STEP/DIR start LOW; SLP/RST sequence avoids glitches.
    ================================================================ */
 void GimbalStepper_Init(void)
 {
@@ -75,208 +63,219 @@ void GimbalStepper_Init(void)
     RCC_APB2ENR |= RCC_APB2ENR_IOPBEN;
     RCC_APB1ENR |= RCC_APB1ENR_TIM4EN;
 
-    /* GPIO config:
-       PB5  (PAN_STEP)  -> GP output PP 50 MHz  : MODE=11 CNF=00
-       PB6  (PAN_DIR)   -> GP output PP 50 MHz
-       PB7  (TILT_STEP) -> GP output PP 50 MHz
-       PB8  (TILT_DIR)  -> GP output PP 50 MHz
-       PB9  (SLP)       -> GP output PP 50 MHz
-       PB0  (RST)       -> GP output PP 50 MHz
-    */
+    /* GPIOB: PB0,5,6,7,8,9 -> GP output PP 50 MHz (MODE=11, CNF=00 -> 0x3) */
     crl = GPIOB_CRL;
-    /* PB0: CRL[3:0] = 0011 */
-    crl = (crl & ~0xFUL) | 0x3UL;
-    /* PB5: CRL[23:20] = 0011 */
-    crl = (crl & ~(0xFUL << 20)) | (0x3UL << 20);
-    /* PB6: CRL[27:24] = 0011 */
-    crl = (crl & ~(0xFUL << 24)) | (0x3UL << 24);
-    /* PB7: CRL[31:28] = 0011 */
-    crl = (crl & ~(0xFUL << 28)) | (0x3UL << 28);
+    crl = (crl & ~0xFUL)         | 0x3UL;            /* PB0 */
+    crl = (crl & ~(0xFUL << 20)) | (0x3UL << 20);    /* PB5 */
+    crl = (crl & ~(0xFUL << 24)) | (0x3UL << 24);    /* PB6 */
+    crl = (crl & ~(0xFUL << 28)) | (0x3UL << 28);    /* PB7 */
     GPIOB_CRL = crl;
 
     crh = GPIOB_CRH;
-    /* PB8: CRH[3:0] = 0011 */
-    crh = (crh & ~0xFUL) | 0x3UL;
-    /* PB9: CRH[7:4] = 0011 */
-    crh = (crh & ~(0xFUL << 4)) | (0x3UL << 4);
+    crh = (crh & ~0xFUL)         | 0x3UL;            /* PB8 */
+    crh = (crh & ~(0xFUL << 4))  | (0x3UL << 4);     /* PB9 */
     GPIOB_CRH = crh;
 
-    /* start with all outputs low, then release SLP/RST (high) */
-    GIMBAL_GPIO_BSRR = GIMBAL_STEP_MASK | GIMBAL_DIR_MASK | GIMBAL_CTL_MASK;
-    GIMBAL_GPIO_BSRR = GIMBAL_BS_SET(GIMBAL_PIN_RST);
-    GIMBAL_GPIO_BSRR = GIMBAL_BS_SET(GIMBAL_PIN_SLP);
+    /* --- safe init: all outputs LOW, then RST HIGH, then SLP HIGH --- */
+    GIMBAL_GPIO_RESET(GIMBAL_MASK_STEP | GIMBAL_MASK_DIR);
+    GIMBAL_GPIO_RESET(GIMBAL_MASK_RST);
+    GIMBAL_GPIO_RESET(GIMBAL_MASK_SLP);
+    GIMBAL_GPIO_SET(GIMBAL_MASK_RST);   /* release reset while STEP low */
+    GIMBAL_GPIO_SET(GIMBAL_MASK_SLP);   /* enable driver */
 
-    /* TIM4 for 10 us ISR */
-    GIMBAL_TIM_PSC = GIMBAL_TIM_PSC_VALUE;
-    GIMBAL_TIM_ARR = GIMBAL_TIM_ARR_VALUE;
-    GIMBAL_TIM_DIER = (1UL << 0);  /* UI enable */
-    GIMBAL_TIM_CR1  = (1UL << 0);  /* CEN */
+    /* TIM4 for 10us tick (always running, even when stepper output disabled) */
+    GIMBAL_TIM_PSC  = GIMBAL_TIM_PSC_VALUE;
+    GIMBAL_TIM_ARR  = GIMBAL_TIM_ARR_VALUE;
+    GIMBAL_TIM_DIER = (1UL << 0);        /* UIE */
+    GIMBAL_TIM_CR1  = (1UL << 0);        /* CEN */
 
     nvic_bit = GIMBAL_TIM_IRQn;
     if (nvic_bit < 32UL) NVIC_ISER0 = (1UL << nvic_bit);
 
-    /* axis state init */
-    g_pan.pin_step   = GIMBAL_PIN_PAN_STEP;
-    g_pan.pin_dir    = GIMBAL_PIN_PAN_DIR;
-    g_pan.alpha      = 0.3f;
-    g_tilt.pin_step  = GIMBAL_PIN_TILT_STEP;
-    g_tilt.pin_dir   = GIMBAL_PIN_TILT_DIR;
-    g_tilt.alpha     = 0.3f;
+    /* axis state */
+    g_pan.pin_step_mask = GIMBAL_MASK_PAN_STEP;
+    g_pan.pin_dir_mask  = GIMBAL_MASK_PAN_DIR;
+    g_pan.dir_sign      = (int8_t)PAN_DIR_SIGN;
+    g_tilt.pin_step_mask = GIMBAL_MASK_TILT_STEP;
+    g_tilt.pin_dir_mask  = GIMBAL_MASK_TILT_DIR;
+    g_tilt.dir_sign      = (int8_t)TILT_DIR_SIGN;
 
-    g_stepper_run_flag    = 0;
-    g_stepper_pan_deg_s   = 0.0f;
-    g_stepper_tilt_deg_s  = 0.0f;
-    g_last_valid_ms       = 0;
-    g_timeout_active      = 0;
+    g_gimbal_tick10us       = 0;
+    g_stepper_run_flag      = 0;
+    g_stepper_pan_degs_milli  = 0;
+    g_stepper_tilt_degs_milli = 0;
 }
 
 /* ================================================================
-   Stop all immediately
+   StopAll – emergency, no step edges, SLP optional low.
    ================================================================ */
 void GimbalStepper_StopAll(void)
 {
-    GIMBAL_GPIO_BSRR = GIMBAL_STEP_MASK | GIMBAL_DIR_MASK;
-    g_pan.target_deg_s  = 0.0f;
-    g_pan.current_deg_s = 0.0f;
-    g_pan.accum         = 0;
-    g_tilt.target_deg_s  = 0.0f;
-    g_tilt.current_deg_s = 0.0f;
-    g_tilt.accum         = 0;
-    g_stepper_run_flag   = 0;
-    g_stepper_pan_deg_s  = 0.0f;
-    g_stepper_tilt_deg_s = 0.0f;
-    g_timeout_active     = 1;
+    uint32_t bsrr = 0;
+
+    stepper_stop_axis(&g_pan, &bsrr);
+    stepper_stop_axis(&g_tilt, &bsrr);
+    /* ensure DIR also low for both axes */
+    bsrr |= ((uint32_t)GIMBAL_MASK_DIR) << 16U;
+
+    if (bsrr) GIMBAL_GPIO_BSRR = bsrr;
+
+#if GIMBAL_SLEEP_ON_STOPALL
+    GIMBAL_GPIO_RESET(GIMBAL_MASK_SLP);
+#endif
+
+    g_stepper_run_flag      = 0;
+    g_stepper_pan_degs_milli  = 0;
+    g_stepper_tilt_degs_milli = 0;
 }
 
 /* ================================================================
-   Set signed speed target
+   SetAxisSpeed – pre-compute half_period_ticks (called from 20ms loop)
    ================================================================ */
 void GimbalStepper_SetAxisSpeed(GimbalAxis axis, float deg_per_sec)
 {
     StepperAxis *a = (axis == GIMBAL_AXIS_PAN) ? &g_pan : &g_tilt;
     float clamped = deg_per_sec;
+    float abs_speed, step_freq, half_period_us;
+    uint32_t ticks;
+    int new_dir_sign;
+
     if (clamped >  GIMBAL_MAX_DEG_PER_SEC) clamped =  GIMBAL_MAX_DEG_PER_SEC;
     if (clamped < -GIMBAL_MAX_DEG_PER_SEC) clamped = -GIMBAL_MAX_DEG_PER_SEC;
     a->target_deg_s = clamped;
-}
 
-/* ================================================================
-   Control from vision error
-   ================================================================ */
-void GimbalStepper_ControlFromError(int32_t ex, int32_t ey, int valid,
-                                    uint32_t now_ms)
-{
-    float pan_raw, tilt_raw;
-    float pan_target, tilt_target;
-    int pan_dead, tilt_dead;
+    abs_speed = (float)(clamped < 0.0f ? -clamped : clamped);
 
-    if (!valid) {
-        if (now_ms - g_last_valid_ms > GIMBAL_TIMEOUT_MS) {
-            GimbalStepper_StopAll();
-        }
+    if (abs_speed < 0.001f) {
+        a->half_period_ticks = 0;  /* stopped */
         return;
     }
-    g_last_valid_ms = now_ms;
-    g_timeout_active = 0;
 
-    /* convert pixel error -> raw command (using the tracker gains that
-       produce -1000..+1000 pan/tilt commands from manual_tracker_state) */
-    pan_raw  = (float)ex * 0.05f;   /* rough gain – same order as tracker kp */
-    tilt_raw = (float)ey * 0.05f;
+    step_freq      = abs_speed / GIMBAL_MICROSTEP_DEG_PER_STEP;
+    if (step_freq < 1.0f) step_freq = 1.0f;
+    half_period_us = 500000.0f / step_freq;
+    ticks = (uint32_t)(half_period_us / (float)GIMBAL_ISR_PERIOD_US + 0.5f);
+    if (ticks < 1UL) ticks = 1UL;
+    a->half_period_ticks = ticks;
 
-    /* deadband */
-    pan_dead  = (abs(ex) <= GIMBAL_DEADBAND_PX);
-    tilt_dead = (abs(ey) <= GIMBAL_DEADBAND_PX);
-
-    pan_target  = pan_dead  ? 0.0f : GIMBAL_RAW_TO_DEG_S(pan_raw);
-    tilt_target = tilt_dead ? 0.0f : GIMBAL_RAW_TO_DEG_S(tilt_raw);
-
-    GimbalStepper_SetAxisSpeed(GIMBAL_AXIS_PAN,  pan_target);
-    GimbalStepper_SetAxisSpeed(GIMBAL_AXIS_TILT, tilt_target);
-
-    g_stepper_run_flag    = 1;
-    g_stepper_pan_deg_s   = pan_target;
-    g_stepper_tilt_deg_s  = tilt_target;
+    /* DIR update: if speed sign changed, request a safe direction change */
+    new_dir_sign = (clamped > 0.0f) ? a->dir_sign : (int8_t)(-a->dir_sign);
+    if (new_dir_sign != (a->dir_want_high ? a->dir_sign : (int8_t)(-a->dir_sign))) {
+        a->dir_pending   = 1;
+        a->dir_want_high = (uint8_t)(new_dir_sign > 0);
+        a->dir_sign      = new_dir_sign; /* commit for next comparison */
+    }
 }
 
 /* ================================================================
-   10 us ISR – software STEP/DIR pulse generation
+   ControlFromCommand – called every 20ms; uses tracker pan/tilt cmd.
+   ================================================================ */
+void GimbalStepper_ControlFromCommand(int32_t pan_cmd, int32_t tilt_cmd,
+                                      int valid)
+{
+    float pan_dps, tilt_dps;
+
+    if (!valid) {
+        /* timeout is checked by the caller; here just zero targets */
+        GimbalStepper_SetAxisSpeed(GIMBAL_AXIS_PAN,  0.0f);
+        GimbalStepper_SetAxisSpeed(GIMBAL_AXIS_TILT, 0.0f);
+    } else {
+        pan_dps  = GIMBAL_RAW_TO_DEG_S((float)pan_cmd);
+        tilt_dps = GIMBAL_RAW_TO_DEG_S((float)tilt_cmd);
+        GimbalStepper_SetAxisSpeed(GIMBAL_AXIS_PAN,  pan_dps);
+        GimbalStepper_SetAxisSpeed(GIMBAL_AXIS_TILT, tilt_dps);
+    }
+
+    g_stepper_run_flag      = (uint8_t)valid;
+    g_stepper_pan_degs_milli  = (int32_t)(GIMBAL_RAW_TO_DEG_S((float)pan_cmd) * 1000.0f);
+    g_stepper_tilt_degs_milli = (int32_t)(GIMBAL_RAW_TO_DEG_S((float)tilt_cmd) * 1000.0f);
+
+    if (!valid) {
+        g_stepper_pan_degs_milli  = 0;
+        g_stepper_tilt_degs_milli = 0;
+    }
+}
+
+/* ================================================================
+   10us ISR – integer only; UIF always cleared.
    ================================================================ */
 void GimbalStepper_Task10usISR(void)
 {
-    uint32_t sr = GIMBAL_TIM_SR;
     uint32_t bsrr = 0;
-    (void)sr;
-    /* clear UIF */
-    GIMBAL_TIM_SR = (uint16_t)~((uint16_t)0x0001);
+
+    /* Always clear UIF and increment tick — safe for macro=0. */
+    GIMBAL_TIM_SR = 0U;   /* write 0 to clear all rc_w0 flags */
+    ++g_gimbal_tick10us;
 
 #if GIMBAL_ENABLE_STEPPER_OUTPUT
     if (!g_stepper_run_flag) return;
 
     /* --- PAN --- */
     {
-        float speed = g_pan.target_deg_s;
-        /* smooth */
-        g_pan.current_deg_s += g_pan.alpha * (speed - g_pan.current_deg_s);
-        if (g_pan.current_deg_s > -0.01f && g_pan.current_deg_s < 0.01f) {
+        uint32_t ticks = g_pan.half_period_ticks;
+
+        if (ticks == 0UL) {
             /* stopped */
             if (g_pan.step_level) {
-                bsrr |= GIMBAL_BS_RESET(g_pan.pin_step);
+                bsrr |= ((uint32_t)g_pan.pin_step_mask) << 16U;
                 g_pan.step_level = 0;
             }
             g_pan.accum = 0;
         } else {
-            float abs_speed = (g_pan.current_deg_s > 0.0f) ? g_pan.current_deg_s
-                                                            : -g_pan.current_deg_s;
-            float step_freq = (float)GIMBAL_STEP_FREQ_FROM_DEG_S(abs_speed);
-            uint32_t half_period;
-            if (step_freq < 1.0f) step_freq = 1.0f;
-            half_period = (uint32_t)(500000.0f / step_freq + 0.5f);  /* half period in us */
-            if (half_period < (uint32_t)GIMBAL_ISR_PERIOD_US)
-                half_period = (uint32_t)GIMBAL_ISR_PERIOD_US;
-            g_pan.half_period_us = half_period;
+            /* pending DIR change: complete current step, then apply */
+            if (g_pan.dir_pending) {
+                if (g_pan.step_level) {
+                    bsrr |= ((uint32_t)g_pan.pin_step_mask) << 16U;
+                    g_pan.step_level = 0;
+                }
+                g_pan.accum = 0;
+                g_pan.dir_pending = 0;
+                bsrr |= g_pan.dir_want_high
+                        ? (uint32_t)g_pan.pin_dir_mask
+                        : ((uint32_t)g_pan.pin_dir_mask) << 16U;
+            }
 
-            update_dir_pin(GIMBAL_AXIS_PAN, &g_pan, g_pan.current_deg_s);
-
-            g_pan.accum += (uint32_t)GIMBAL_ISR_PERIOD_US;
-            if (g_pan.accum >= half_period) {
-                g_pan.accum -= half_period;
+            g_pan.accum += 1UL;
+            if (g_pan.accum >= ticks) {
+                g_pan.accum -= ticks;
                 g_pan.step_level ^= 1;
-                bsrr |= g_pan.step_level ? GIMBAL_BS_SET(g_pan.pin_step)
-                                         : GIMBAL_BS_RESET(g_pan.pin_step);
+                bsrr |= g_pan.step_level
+                        ? (uint32_t)g_pan.pin_step_mask
+                        : ((uint32_t)g_pan.pin_step_mask) << 16U;
             }
         }
     }
 
     /* --- TILT --- */
     {
-        float speed = g_tilt.target_deg_s;
-        g_tilt.current_deg_s += g_tilt.alpha * (speed - g_tilt.current_deg_s);
-        if (g_tilt.current_deg_s > -0.01f && g_tilt.current_deg_s < 0.01f) {
+        uint32_t ticks = g_tilt.half_period_ticks;
+
+        if (ticks == 0UL) {
             if (g_tilt.step_level) {
-                bsrr |= GIMBAL_BS_RESET(g_tilt.pin_step);
+                bsrr |= ((uint32_t)g_tilt.pin_step_mask) << 16U;
                 g_tilt.step_level = 0;
             }
             g_tilt.accum = 0;
         } else {
-            float abs_speed = (g_tilt.current_deg_s > 0.0f) ? g_tilt.current_deg_s
-                                                              : -g_tilt.current_deg_s;
-            float step_freq = (float)GIMBAL_STEP_FREQ_FROM_DEG_S(abs_speed);
-            uint32_t half_period;
-            if (step_freq < 1.0f) step_freq = 1.0f;
-            half_period = (uint32_t)(500000.0f / step_freq + 0.5f);
-            if (half_period < (uint32_t)GIMBAL_ISR_PERIOD_US)
-                half_period = (uint32_t)GIMBAL_ISR_PERIOD_US;
-            g_tilt.half_period_us = half_period;
+            if (g_tilt.dir_pending) {
+                if (g_tilt.step_level) {
+                    bsrr |= ((uint32_t)g_tilt.pin_step_mask) << 16U;
+                    g_tilt.step_level = 0;
+                }
+                g_tilt.accum = 0;
+                g_tilt.dir_pending = 0;
+                bsrr |= g_tilt.dir_want_high
+                        ? (uint32_t)g_tilt.pin_dir_mask
+                        : ((uint32_t)g_tilt.pin_dir_mask) << 16U;
+            }
 
-            update_dir_pin(GIMBAL_AXIS_TILT, &g_tilt, g_tilt.current_deg_s);
-
-            g_tilt.accum += (uint32_t)GIMBAL_ISR_PERIOD_US;
-            if (g_tilt.accum >= half_period) {
-                g_tilt.accum -= half_period;
+            g_tilt.accum += 1UL;
+            if (g_tilt.accum >= ticks) {
+                g_tilt.accum -= ticks;
                 g_tilt.step_level ^= 1;
-                bsrr |= g_tilt.step_level ? GIMBAL_BS_SET(g_tilt.pin_step)
-                                          : GIMBAL_BS_RESET(g_tilt.pin_step);
+                bsrr |= g_tilt.step_level
+                        ? (uint32_t)g_tilt.pin_step_mask
+                        : ((uint32_t)g_tilt.pin_step_mask) << 16U;
             }
         }
     }
