@@ -7,3 +7,9 @@ MSPM0G3507 必须负责速度与转向、制动、避障、PID、限幅、目标
 当前 `VehicleTaskResult` 和 MCU 文件仅占位，初始化保持 `manual_stop=1`、`execution_enabled=0`。不实现自动驾驶控制，也不实现 TASK 解析。
 
 未来新增 TASK 帧时必须保持现有 AIM 帧不变，并增加 Python/C 解析器测试。
+
+## 阶段 2：主控侧空跑验证
+
+本阶段只验证 `$MV,AIM` 文本帧经过共享 C 解析器后进入 `target_aiming_state_machine`，并观察抽象的 `pan_command / tilt_command` 建议值。它们不是底盘速度、PWM 或舵机角度。
+
+在 PC 上喂入左右、上下、`NO_SPOT`、`LOST`、`ERROR` 和 `AIMED` 模拟帧；确认误差与建议方向一致，所有无效/丢失/错误状态归零。通过后才能进行 STM32ZET6 或 MSPM0G3507 实板解析验证，且仍保持 `execution_enabled=0`、不连接执行机构。
