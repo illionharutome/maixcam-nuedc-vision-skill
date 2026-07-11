@@ -1,0 +1,1 @@
+{"enabled":true,"lab_threshold":[0,100,15,80,-80,-10],"min_area":20,"max_area":6000,"min_score":0.003,"smoothing_alpha":0.5,"lost_timeout_frames":5,"field_calibration_required":true}

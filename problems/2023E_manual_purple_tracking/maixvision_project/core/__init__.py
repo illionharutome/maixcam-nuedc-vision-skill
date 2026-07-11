@@ -1,0 +1,1 @@
+"""Local result types."""

@@ -4,6 +4,8 @@
 
 新增题目统一放在 `problems/<题号_用途>/`，每题隔离 MaixVision 工程、MCU、脚本、配置、日志与文档。`problems/2023E_single_gimbal/` 是当前单云台 subset 主线；其 `maixvision_project/` 可独立打开，不依赖仓库根目录或 `shared/`。
 
+当前实验主线已切换为 `problems/2023E_manual_purple_tracking/`：摄像头与安全低功率红色可见光点固定在同一云台上，视觉检测用户手动移动的紫色目标，并计算目标相对手动标定准星的误差。旧 `2023E_single_gimbal` 保留为已完成 scaffold，不删除、不覆盖。
+
 现有根目录 `apps_replay/`、`apps_atomic/`、`mcu_stm32zet6_debug/`、`scripts/`、`vision/`、`comm/` 和 `core/` 暂作为 legacy / verified baseline 保留，以避免破坏已通过的 2025E、analyze-raw 和 STM32 bridge 验证链路。`problems/2025E_target_aiming/` 当前只提供索引，后续再分阶段复制迁移。`shared/` 只记录真正通用的协议和工具思路，MaixVision 运行时不得依赖它。
 
 本仓库重建安全、克制的 2025E 视觉最小闭环：MaixCAM-Pro 识别靶心与红点替代物，计算图像空间误差并输出 `$MV,AIM`；PC 记录分析；STM32ZET6 仅作调试桥；天猛星 MSPM0G3507 是最终主控模板。
