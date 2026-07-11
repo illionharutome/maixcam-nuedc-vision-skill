@@ -1,0 +1,9 @@
+{
+  "laser_spot": {"preferred": "traditional", "modules": ["laser_spot", "tracker"]},
+  "color_blob": {"preferred": "traditional", "modules": ["color_blob", "tracker"]},
+  "line_or_border": {"preferred": "traditional", "modules": ["line_track", "rectangle_detect"]},
+  "circle": {"preferred": "traditional", "modules": ["circle_detect"]},
+  "complex_class_or_symbol": {"preferred": "yolo", "modules": ["yolo_detect"]},
+  "precision_after_yolo": {"preferred": "hybrid", "rule": "Use YOLO bbox as ROI for traditional vision."}
+}
+
