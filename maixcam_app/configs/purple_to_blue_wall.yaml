@@ -1,0 +1,13 @@
+{
+  "target_name": "laser_blue_shifted_purple",
+  "threshold_strategy": "or",
+  "thresholds": [
+    {"space": "hsv", "enabled": true, "lower": [95, 25, 150], "upper": [155, 255, 255]},
+    {"space": "lab", "enabled": true, "lower": [175, 115, 80], "upper": [255, 180, 150]},
+    {"space": "brightness", "enabled": true, "lower": 245, "upper": 255}
+  ],
+  "roi": [20, 20, 280, 200],
+  "filters": {"min_area": 3, "max_area": 600, "min_circularity": 0.28},
+  "morphology": {"kernel": 3},
+  "tracking": {"max_jump_px": 70, "hold_frames": 4}
+}

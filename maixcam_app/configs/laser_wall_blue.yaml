@@ -1,0 +1,12 @@
+{
+  "target_name": "laser_blue_wall",
+  "threshold_strategy": "and",
+  "thresholds": [
+    {"space": "hsv", "enabled": true, "lower": [90, 60, 130], "upper": [140, 255, 255]},
+    {"space": "brightness", "enabled": true, "lower": 170, "upper": 255}
+  ],
+  "roi": [0, 0, 320, 240],
+  "filters": {"min_area": 3, "max_area": 500, "min_circularity": 0.3},
+  "morphology": {"kernel": 3},
+  "tracking": {"max_jump_px": 60, "hold_frames": 3}
+}
