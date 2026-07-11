@@ -1,4 +1,0 @@
-interface:
-  display_name: "MaixCAM NUEDC Vision"
-  short_description: "Rebuild and maintain the safe MaixCAM contest vision loop"
-  default_prompt: "Use $maixcam-nuedc-vision-skill-rebuild to build or review a safe MaixCAM NUEDC vision workflow."

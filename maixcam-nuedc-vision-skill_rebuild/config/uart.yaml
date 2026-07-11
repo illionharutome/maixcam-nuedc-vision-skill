@@ -1,6 +1,0 @@
-enabled: false
-device: auto
-baudrate: 115200
-max_frame_length: 160
-wireless_note: "MaixVision wireless execution is not a PC COM serial port; use print output or a USB-TTL UART."
-field_measurement_required: [device, baudrate]

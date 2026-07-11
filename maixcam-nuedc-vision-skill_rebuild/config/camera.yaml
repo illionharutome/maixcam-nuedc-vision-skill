@@ -1,7 +1,0 @@
-# Resolution and frame rate must be verified on the target MaixCAM-Pro.
-width: 320
-height: 240
-format: RGB888
-fps: 30
-buffer_num: 3
-field_measurement_required: [focus, exposure, white_balance, actual_fps]

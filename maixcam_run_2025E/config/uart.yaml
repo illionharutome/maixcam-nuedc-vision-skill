@@ -1,5 +1,0 @@
-device: auto
-baudrate: 115200
-send_mode: SPOT
-max_frame_length: 160
-field_measurement_required: [device, baudrate]

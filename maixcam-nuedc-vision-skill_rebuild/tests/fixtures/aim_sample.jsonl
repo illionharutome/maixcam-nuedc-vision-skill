@@ -1,2 +1,0 @@
-{"timestamp":"2026-07-11T10:00:00+08:00","ok":true,"target_cx":160,"target_cy":120,"spot_cx":158,"spot_cy":120,"aim_error_x":-2,"aim_error_y":0,"score":0.9,"fps":20.0,"status":"AIMED"}
-{"timestamp":"2026-07-11T10:00:01+08:00","ok":false,"target_cx":160,"target_cy":120,"spot_cx":0,"spot_cy":0,"aim_error_x":0,"aim_error_y":2,"score":0.0,"fps":10.0,"status":"NO_SPOT"}
