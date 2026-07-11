@@ -1,4 +1,4 @@
-# STM32ZET6 debug bridge —— 实板 FlyMcu + VOFA 验证
+# STM32ZET6 debug bridge 实板解析验证
 
 本目录只用于验证以下数据链路：
 
@@ -7,219 +7,117 @@ $MV,AIM 文本字节流
 -> mcu_common/mv_parser
 -> Aim_Result
 -> target_aiming_state_machine
--> TargetAimingCommand
--> USART1_TX 回传 DBG 调试文本到 VOFA
+-> TargetAimingCommand（仅供调试器观察）
 ```
 
-STM32ZET6 只是临时 debug bridge，不是最终主控。最终主控仍然是天猛星 MSPM0G3507；后续真实小车、云台和其他执行机构控制必须迁移到天猛星 MSPM0G3507。本阶段 STM32ZET6 只验证 UART 接收、`$MV,AIM` 解析、状态机建议值方向和 USART1 TX 回传，不运行真实 PID，不输出 PWM，不控制舵机、云台、真实激光、小车或机械臂。`pan_command` 和 `tilt_command` 是无量纲建议值，不是角度、脉宽或可直接执行的命令。
+STM32ZET6 只是临时 debug bridge，不是最终主控。最终主控仍然是天猛星 MSPM0G3507；后续真实小车、云台和其他执行机构控制必须迁移到天猛星 MSPM0G3507。本阶段 STM32ZET6 只验证 UART 接收、`$MV,AIM` 解析和状态机建议值方向，不运行真实 PID，不输出 PWM，不控制舵机、云台、真实激光、小车或机械臂。`pan_command` 和 `tilt_command` 是无量纲建议值，不是角度、脉宽或可直接执行的命令。
 
----
+## 1. 示例代码能力与工程集成
 
-## 1. 代码结构
+[`examples/example_receive_aiming.c`](examples/example_receive_aiming.c) 已完成：
 
-```
-mcu_stm32zet6_debug/
-├── README.md                          <- 本文件
-├── examples/
-│   └── example_receive_aiming.c       <- vision_debug_bridge 接收 + 解析 + 全局变量
-└── keil_stm32f103zet6_bridge/
-    ├── README.md                      <- Keil 工程说明书 + FlyMcu/VOFA 操作指南
-    ├── MDK-ARM/
-    │   └── stm32zet6_debug_bridge.uvprojx
-    ├── CMSIS/
-    │   └── startup_stm32f10x_hd.s
-    └── USER/
-        ├── bridge_config.h            <- UART 选择 + 时钟 + 中断号
-        └── main.c                     <- 时钟、UART RX/TX 初始化、TX helper、DBG 输出主循环
+1. 逐字节调用 `mv_parser_feed()`；
+2. 保存最新 `Aim_Result` 到 `g_latest_aim`；
+3. 调用现有 `target_aiming_update()`；
+4. 保存建议结果到 `g_latest_command`；
+5. 最后置位 `g_latest_aim_ready`，方便断点或 watch 判断新帧。
+
+把以下源码加入 STM32 工程：
+
+```text
+mcu_common/mv_parser.c
+mcu_tmx3507/app/target_aiming_state_machine.c
+mcu_stm32zet6_debug/examples/example_receive_aiming.c
 ```
 
-引用依赖：
+在时钟和 UART 初始化完成后调用一次：
 
-```
-mcu_common/mv_parser.c              <- $MV,AIM 帧解析器（复用）
-mcu_common/mv_parser.h
-mcu_common/mv_protocol.h
-mcu_common/mv_result.h              <- Aim_Result 结构体
-mcu_tmx3507/app/target_aiming_state_machine.c  <- 瞄准状态机（复用）
-mcu_tmx3507/app/target_aiming_state_machine.h
+```c
+vision_debug_bridge_init();
 ```
 
----
+在 UART RX 中断、HAL 回调或 DMA 消费循环中，把收到的每一个字节依次传入：
 
-## 2. 已确认的精英板 V2 UART 引脚
+```c
+vision_debug_bridge_rx_byte(received_byte);
+```
 
-依据原理图：
+示例故意不写死 HAL/标准库、UART 号、中断函数、DMA、GPIO 或时钟配置。先用 115200、8-N-1；实际 UART 外设与引脚必须以当前 STM32 工程和板卡资料为准。
 
-- **PA10 = USART1_RX** ← USB-UART TXD（通过 P3 跳帽）
-- **PA9  = USART1_TX** → USB-UART RXD（通过 P3 跳帽）
-- P3 默认短接即可使用；Type-C 枚举出的 COM 口可同时收发。
-- 备选：PA3 = USART2_RX（受 P5 跳帽影响，需先处理 P5 配置）。
+## 2. 已确认的精英板 V2 UART 候选引脚
 
-**本阶段使用 USART1（板载 USB-UART，PA10 RX + PA9 TX）。**
+依据工作区 `H:\ForCodex\MaixCam\zet6\精英板V2 IO引脚分配表.xlsx` 和原理图：
 
----
+- **默认（板载 USB-UART / Type-C）**：`PA10 = USART1_RX`、`PA9 = USART1_TX`，通过 P3 跳帽连接板载 CH340。P3 默认短接即可使用；串口助手选择 Type-C 枚举出的 COM 口，115200、8-N-1、ASCII，可同时收发。
+- 备选接收：`PA3 = USART2_RX`。PA3 与 `RS485_TX` 受 P5 跳帽配置影响；用于本测试前，应按板卡资料断开/调整 P5，使 PA3 不受 RS485 发送端驱动。
+- USART2 可选回传：`PA2 = USART2_TX`。PA2 与 `RS485_RX` 同样受 P5 配置影响。
+
+不要把 MaixCAM TTL UART 接到 RS485 的 A/B 差分端子。引脚表中的 36/37/101/102 是 MCU 引脚编号，不应直接当作板上排针编号；实际排针位置继续对照原理图和板卡丝印。
 
 ## 3. 最小接线
 
-**无需额外接线**——Type-C 线直连 PC 即可：
+默认使用板载 USB-UART（USART1），无需额外接线——Type-C 线直连 PC，串口助手选择对应 COM 口即可：
 
 ```text
-板载 USB-UART TXD -> PA10 / USART1_RX（通过 P3 跳帽）
-板载 USB-UART RXD <- PA9  / USART1_TX（通过 P3 跳帽）
+板载 USB-UART TXD → PA10 / USART1_RX（通过 P3 跳帽）
 板载 GND 已在板上共地。
 ```
 
----
-
-## 4. 编译与下载
-
-### 4.1 Keil Build 生成 .hex
-
-1. 打开 `keil_stm32f103zet6_bridge/MDK-ARM/stm32zet6_debug_bridge.uvprojx`；
-2. 确认 `Options for Target -> Output -> Create HEX File` **已勾选**（工程已默认开启）；
-3. 执行 `Project -> Build Target`；
-4. 成功生成 `Objects/stm32zet6_debug_bridge.hex`。
-
-### 4.2 FlyMcu 下载 .hex
-
-> **FlyMcu 和 VOFA 不能同时占用同一个 COM 口。下载完成后必须关闭 FlyMcu 或断开其串口连接。**
-
-1. 将精英板 V2 通过 **Type-C 线** 连接到 PC；
-2. **BOOT0 = 1，BOOT1 = 0**；
-3. 按一下 **复位** 按键；
-4. 打开 **FlyMcu**，选择 Type-C 枚举出的 COM 口；
-5. 波特率选 115200；
-6. 选择 `Objects/stm32zet6_debug_bridge.hex`；
-7. 点击"开始编程"；
-8. 下载成功后 **关闭 FlyMcu**（否则 VOFA 打不开 COM 口）；
-9. **BOOT0 = 0，BOOT1 = 0**；
-10. 按一下 **复位** 按键，运行用户程序。
-
----
-
-## 5. VOFA 串口回传验证
-
-### 5.1 VOFA 设置
-
-1. 打开 VOFA，选择 Type-C 枚举出的 COM 口；
-2. 协议：**RawData**；
-3. 波特率：**115200**，8-N-1；
-4. **关闭 Hex 显示**；
-5. 发送区选择 **文本 / ASCII 发送**。
-
-### 5.2 DBG 回传格式
-
-每收到一帧完整的 `$MV,AIM`，STM32ZET6 通过 USART1_TX 回传一行：
+若改用外部 USB-TTL 接 USART2（需先在 `keil_stm32f103zet6_bridge/USER/bridge_config.h` 中将 `BRIDGE_USE_USART1` 改为 0、`BRIDGE_USE_USART2` 改为 1）：
 
 ```text
-$DBG,AIM,EX=<int>,EY=<int>,CX=<int>,CY=<int>,SX=<int>,SY=<int>,PAN=<milli_int>,TILT=<milli_int>,SCORE=<milli_int>,FPS=<milli_int>,VALID=<0|1>,STATUS=<str>,STATE=<str>#
+外部 USB-TTL TX → PA3 / USART2_RX
+发送端 GND      → STM32 GND
 ```
 
-其中：
-- **EX/EY**：aim_error_x / aim_error_y（整数像素）
-- **CX/CY**：target_cx / target_cy（目标质心）
-- **SX/SY**：spot_cx / spot_cy（光斑质心）
-- **PAN/TILT**：pan/tilt 命令 × 1000（整数毫单位，例如 -600 表示 -0.600）
-- **SCORE/FPS**：置信度/帧率 × 1000
-- **VALID**：0 或 1
-- **STATUS**：AIMING / AIMED / NO_SPOT 等
-- **STATE**：DISABLED / NO_SPOT / TRACKING / LOCKED
+只有未来确实需要双向通信时才增加 TX 接线。接线前确认两端 UART 逻辑电平兼容。不要接任何执行机构。MaixVision 无线连接不是 UART 物理链路：无线运行和控制台 `print` 不会自动让 STM32 RX 收到字节。若 MaixCAM 当前仍是 print-only 配置，则其 TX 引脚不会输出这些帧；本指南不修改 MaixCAM 配置或协议。
 
----
+## 4. 测试帧
 
-## 6. 测试帧与预期 DBG 回传
-
-### 测试帧 1：普通 AIMING（红点在左上）
-
-发送：
+按顺序发送以下 ASCII 文本，每帧以 `#` 结束：
 
 ```text
 $MV,AIM,1,160,120,148,132,-12,12,0.91,25.6,AIMING#
-```
-
-期望 DBG 包含：
-
-| 字段 | 期望值 |
-|---|---|
-| EX | -12 |
-| EY | 12 |
-| PAN | 负值（约 -600） |
-| TILT | 正值（约 +600） |
-| VALID | 1 |
-| STATUS | AIMING |
-| STATE | TRACKING |
-
----
-
-### 测试帧 2：红点在右侧
-
-发送：
-
-```text
 $MV,AIM,1,160,120,190,120,30,0,0.91,25.6,AIMING#
-```
-
-期望 DBG 包含：
-
-| 字段 | 期望值 |
-|---|---|
-| EX | 30 |
-| EY | 0 |
-| PAN | 正值或 +1000（限幅） |
-| TILT | 0 |
-| VALID | 1 |
-
----
-
-### 测试帧 3：NO_SPOT（无光斑）
-
-发送：
-
-```text
 $MV,AIM,0,160,120,0,0,0,0,0.00,25.6,NO_SPOT#
 ```
 
-期望 DBG 包含：
+使用示例中的调试配置（gain 0.05、limit 1.0、dead zone 2）时，预期：
 
-| 字段 | 期望值 |
-|---|---|
-| VALID | 0 |
-| PAN | 0 |
-| TILT | 0 |
-| STATUS | NO_SPOT |
-| STATE | NO_SPOT |
+| 帧 | valid | state | pan_command | tilt_command |
+|---|---:|---|---:|---:|
+| `-12,12,AIMING` | 1 | `TARGET_AIM_TRACKING` | 约 -0.60 | 约 +0.60 |
+| `30,0,AIMING` | 1 | `TARGET_AIM_TRACKING` | +1.00（限幅） | 0 |
+| `NO_SPOT` | 0 | `TARGET_AIM_NO_SPOT` | 0 | 0 |
 
----
+以上数值只验证解析、方向、限幅和安全归零，不得连接到 PWM 或执行器。
 
-### 测试帧 4：AIMED（已锁定）
+## 5. Debugger watch 清单
 
-发送：
+建议添加：
 
 ```text
-$MV,AIM,1,160,120,162,119,2,-1,0.95,25.6,AIMED#
+g_latest_aim_ready
+g_latest_aim.target_cx
+g_latest_aim.target_cy
+g_latest_aim.spot_cx
+g_latest_aim.spot_cy
+g_latest_aim.aim_error_x
+g_latest_aim.aim_error_y
+g_latest_aim.status
+g_latest_command.pan_command
+g_latest_command.tilt_command
+g_latest_command.valid
+g_latest_command.state
 ```
 
-期望 DBG 包含：
+对应用户关注字段为：`target_cx`、`target_cy`、`spot_cx`、`spot_cy`、`aim_error_x`、`aim_error_y`、`status`、`pan_command`、`tilt_command`、`valid`、`state`。
 
-| 字段 | 期望值 |
-|---|---|
-| EX | 2 |
-| EY | -1 |
-| VALID | 1 |
-| PAN | 0（dead zone 内） |
-| TILT | 0（dead zone 内） |
-| STATUS | AIMED |
-| STATE | LOCKED |
+## 6. 通过标准
 
----
-
-## 7. 通过标准
-
-1. 四种测试帧都能使 `g_latest_aim_ready` 更新；
-2. VOFA 接收区收到对应 DBG 回传行；
-3. `Aim_Result` 字段与发送的文本字段完全一致；
-4. 左右误差对应 pan 建议值符号正确；
-5. `NO_SPOT` 时 `valid=0` 且 pan/tilt 为 0；
-6. 全程没有 PID、PWM 或执行机构动作；
-7. 405nm 保持禁用，仍不使用真实激光、YOLO、小车或机械臂功能。
-8. STM32ZET6 仍然是 debug bridge，天猛星 MSPM0G3507 仍然是最终主控。
+1. 三种测试帧都能使 `g_latest_aim_ready` 更新；
+2. `Aim_Result` 与文本字段完全一致；
+3. 左右误差对应 pan 建议符号正确；
+4. `NO_SPOT` 时 `valid=0` 且 pan/tilt 为 0；
+5. 全程没有 PID、PWM 或执行机构动作；
+6. 405nm 保持禁用，仍不使用真实激光、YOLO、小车或机械臂功能。

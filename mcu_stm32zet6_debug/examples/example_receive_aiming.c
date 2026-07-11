@@ -10,7 +10,6 @@ static const TargetAimingConfig g_debug_aim_config = {
 volatile Aim_Result g_latest_aim;
 volatile TargetAimingCommand g_latest_command;
 volatile uint8_t g_latest_aim_ready;
-volatile uint8_t g_debug_tx_pending;
 
 void vision_debug_bridge_init(void)
 {
@@ -30,7 +29,6 @@ void vision_debug_bridge_rx_byte(uint8_t byte)
         g_latest_aim = parsed;
         g_latest_command = command;
         g_latest_aim_ready = 1U;
-        g_debug_tx_pending = 1U;
     }
 }
 
