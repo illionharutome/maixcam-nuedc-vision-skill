@@ -14,9 +14,22 @@ import json
 
 from maixcam_app.comm.uart_protocol import encode_vision_result
 from maixcam_app.modules.color_blob import ColorBlobModule
+from maixcam_app.modules.circle_detect import CircleDetectModule
 from maixcam_app.modules.laser_spot import LaserSpotModule
+from maixcam_app.modules.line_track import LineTrackModule
+from maixcam_app.modules.qr_apriltag import QrAprilTagModule
+from maixcam_app.modules.rectangle_detect import RectangleDetectModule
+from maixcam_app.modules.yolo_detect import YoloDetectModule
 
-MODULES = {"color_blob": ColorBlobModule, "laser_spot": LaserSpotModule}
+MODULES = {
+    "circle_detect": CircleDetectModule,
+    "color_blob": ColorBlobModule,
+    "laser_spot": LaserSpotModule,
+    "line_track": LineTrackModule,
+    "qr_apriltag": QrAprilTagModule,
+    "rectangle_detect": RectangleDetectModule,
+    "yolo_detect": YoloDetectModule,
+}
 
 
 def load_config(path: str) -> dict:

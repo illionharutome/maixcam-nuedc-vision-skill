@@ -1,0 +1,8 @@
+{
+  "family": "YOLO11",
+  "model": "/root/models/competition_target.mud",
+  "dual_buff": true,
+  "confidence": 0.5,
+  "iou": 0.45,
+  "labels": ["target"]
+}
