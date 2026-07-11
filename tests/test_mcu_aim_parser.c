@@ -33,11 +33,13 @@ int main(void)
     char spot_left[] = "$MV,AIM,1,160,120,120,120,-40,0,0.91,25.6,AIMING#";
     char no_spot[] = "$MV,AIM,0,160,120,0,0,0,0,0.00,25.6,NO_SPOT#";
     char aimed[] = "$MV,AIM,1,160,120,162,119,2,-1,0.95,25.6,AIMED#";
+    char wrong_field_count[] = "$MV,AIM,1,160,120,148#";
 
     assert_packet(sample, 160, 120, 148, 132, -12, 12, 1U, "AIMING");
     assert_packet(spot_right, 160, 120, 190, 120, 30, 0, 1U, "AIMING");
     assert_packet(spot_left, 160, 120, 120, 120, -40, 0, 1U, "AIMING");
     assert_packet(no_spot, 160, 120, 0, 0, 0, 0, 0U, "NO_SPOT");
     assert_packet(aimed, 160, 120, 162, 119, 2, -1, 1U, "AIMED");
+    assert(mv_parse_packet(wrong_field_count, &(Aim_Result){0}) == MV_PARSE_INVALID);
     return 0;
 }

@@ -15,3 +15,22 @@ datasets/yolo/*
 !datasets/labeled/.gitkeep
 !datasets/yolo/.gitkeep
 .work/
+
+# Keil MDK and host-test build outputs
+*.axf
+*.hex
+*.obj
+*.o
+*.map
+*.lst
+*.crf
+*.d
+*.dep
+*.lnp
+*.sct
+*.uvguix
+*.uvguix.*
+**/Objects/
+**/Listings/
+**/DebugConfig/
+tests/*.exe

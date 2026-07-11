@@ -10,7 +10,7 @@ $MV,AIM 文本字节流
 -> TargetAimingCommand（仅供调试器观察）
 ```
 
-STM32ZET6 只是 debug bridge，不是最终主控。本阶段不运行 PID，不输出 PWM，不控制舵机、云台、真实激光、小车或机械臂。`pan_command` 和 `tilt_command` 是无量纲建议值，不是角度、脉宽或可直接执行的命令。
+STM32ZET6 只是临时 debug bridge，不是最终主控。最终主控仍然是天猛星 MSPM0G3507；后续真实小车、云台和其他执行机构控制必须迁移到天猛星 MSPM0G3507。本阶段 STM32ZET6 只验证 UART 接收、`$MV,AIM` 解析和状态机建议值方向，不运行真实 PID，不输出 PWM，不控制舵机、云台、真实激光、小车或机械臂。`pan_command` 和 `tilt_command` 是无量纲建议值，不是角度、脉宽或可直接执行的命令。
 
 ## 1. 示例代码能力与工程集成
 
