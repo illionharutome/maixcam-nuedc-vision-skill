@@ -22,4 +22,6 @@
 - [ ] 若使用 UART，确认 COM 口、115200 波特率、TX/RX 交叉和 GND 共地。
 - [ ] 明确 MaixVision 无线连接不是 COM 串口。
 - [ ] `tune.py log` 能生成 JSONL；`tune.py analyze` 能输出十项指标。
+- [ ] 无 USB-TTL 时，将 MaixVision 控制台原始文本保存为 `logs/serial/manual_maixvision_raw.txt`，运行 `python scripts/tune.py analyze-raw --file logs/serial/manual_maixvision_raw.txt`。
+- [ ] 确认 `analyze-raw` 输出 `total_lines`、`valid_frames`、`skipped_lines` 和十项 AIM 指标。
 - [ ] STM32ZET6 仅观察解析结果；MSPM0G3507 仅观察建议值，不连接执行机构。
