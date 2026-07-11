@@ -46,31 +46,31 @@ vision_debug_bridge_rx_byte(received_byte);
 
 ## 2. 已确认的精英板 V2 UART 候选引脚
 
-依据工作区 `H:\ForCodex\MaixCam\zet6\精英板V2 IO引脚分配表.xlsx`：
+依据工作区 `H:\ForCodex\MaixCam\zet6\精英板V2 IO引脚分配表.xlsx` 和原理图：
 
-- 推荐单向接收：`PA3 = USART2_RX`。表中说明 PA3 与 `RS485_TX` 受 P5 跳帽配置影响；用于本测试前，应按板卡资料断开/调整 P5，使 PA3 不受 RS485 发送端驱动。
+- **默认（板载 USB-UART / Type-C）**：`PA10 = USART1_RX`、`PA9 = USART1_TX`，通过 P3 跳帽连接板载 CH340。P3 默认短接即可使用；串口助手选择 Type-C 枚举出的 COM 口，115200、8-N-1、ASCII，可同时收发。
+- 备选接收：`PA3 = USART2_RX`。PA3 与 `RS485_TX` 受 P5 跳帽配置影响；用于本测试前，应按板卡资料断开/调整 P5，使 PA3 不受 RS485 发送端驱动。
 - USART2 可选回传：`PA2 = USART2_TX`。PA2 与 `RS485_RX` 同样受 P5 配置影响。
-- 备选接收：`PA10 = USART1_RX`。它默认通过 P3 连接 CH340_TX；接 MaixCAM TX 前必须处理 P3，避免 CH340_TX 与 MaixCAM TX 同时驱动 PA10。
-- USART1 可选回传：`PA9 = USART1_TX`，默认通过 P3 连接 CH340_RX。
 
 不要把 MaixCAM TTL UART 接到 RS485 的 A/B 差分端子。引脚表中的 36/37/101/102 是 MCU 引脚编号，不应直接当作板上排针编号；实际排针位置继续对照原理图和板卡丝印。
 
 ## 3. 最小接线
 
-只做单向解析时：
+默认使用板载 USB-UART（USART1），无需额外接线——Type-C 线直连 PC，串口助手选择对应 COM 口即可：
 
 ```text
-MaixCAM TX -> STM32ZET6 UART RX（推荐 PA3/USART2_RX，先处理 P5）
-MaixCAM GND -> STM32ZET6 GND
+板载 USB-UART TXD → PA10 / USART1_RX（通过 P3 跳帽）
+板载 GND 已在板上共地。
 ```
 
-只有未来确实需要双向通信时才增加：
+若改用外部 USB-TTL 接 USART2（需先在 `keil_stm32f103zet6_bridge/USER/bridge_config.h` 中将 `BRIDGE_USE_USART1` 改为 0、`BRIDGE_USE_USART2` 改为 1）：
 
 ```text
-MaixCAM RX <- STM32ZET6 UART TX
+外部 USB-TTL TX → PA3 / USART2_RX
+发送端 GND      → STM32 GND
 ```
 
-接线前确认两端 UART 逻辑电平兼容。不要接任何执行机构。MaixVision 无线连接不是 UART 物理链路：无线运行和控制台 `print` 不会自动让 STM32 RX 收到字节。若 MaixCAM 当前仍是 print-only 配置，则其 TX 引脚不会输出这些帧；本指南不修改 MaixCAM 配置或协议。
+只有未来确实需要双向通信时才增加 TX 接线。接线前确认两端 UART 逻辑电平兼容。不要接任何执行机构。MaixVision 无线连接不是 UART 物理链路：无线运行和控制台 `print` 不会自动让 STM32 RX 收到字节。若 MaixCAM 当前仍是 print-only 配置，则其 TX 引脚不会输出这些帧；本指南不修改 MaixCAM 配置或协议。
 
 ## 4. 测试帧
 

@@ -3,12 +3,19 @@
 这是可由 Keil MDK 打开的最小 STM32F103ZET6/High-density 工程，只验证：
 
 ```text
-PA3 / USART2_RX（115200, 8-N-1）
+板载 USB-UART / Type-C → PA10 / USART1_RX（115200, 8-N-1）
 -> vision_debug_bridge_rx_byte
 -> mv_parser_feed
 -> g_latest_aim
 -> target_aiming_update
 -> g_latest_command
+```
+
+默认使用板上 USB-UART（USART1, PA10 RX）。如需切换为 PA3 / USART2，修改 `USER/bridge_config.h`：
+
+```c
+#define BRIDGE_USE_USART1    0
+#define BRIDGE_USE_USART2    1
 ```
 
 STM32ZET6 只是临时 debug bridge，最终主控仍是天猛星 MSPM0G3507。本工程不运行 PID，不输出 PWM，不控制舵机、云台、真实激光、小车或机械臂。
@@ -66,16 +73,24 @@ Objects/stm32zet6_debug_bridge.hex
 
 ## UART 接线
 
-单向验证只接：
+默认使用板载 USB-UART（USART1），Type-C 枚举出的 COM 口直接收发。确认精英板 V2 的 **P3 跳帽** 已短接 PA10↔TXD、PA9↔RXD（通常默认已连），就可以用串口助手选择 Type-C 对应的 COM 口发送测试帧。
 
 ```text
-MaixCAM TX 或 USB-TTL TX -> STM32 PA3 / USART2_RX
-发送端 GND                 -> STM32 GND
+板载 USB-UART TXD → PA10 / USART1_RX（通过 P3 跳帽）
+板载 USB-UART RXD ← PA9  / USART1_TX（通过 P3 跳帽，当前未使用）
+板载 GND 已在板上共地，无需额外接线。
 ```
 
-精英板 V2 的 PA3 与 RS485_TX 受 P5 跳帽影响。先按板卡资料处理 P5，确保 PA3 没有被 RS485 发送端驱动。不要连接 RS485 A/B 端子，也不要接执行机构。
+若改用外部 USB-TTL 接 PA3 / USART2（需先修改 `bridge_config.h`）：
 
-MaixVision 无线连接不是 UART 物理链路；`analyze-raw` 只能验证复制的控制台文本。本阶段必须让 MaixCAM UART TX 或 PC USB-TTL TX 实际向 PA3 发送字节流。
+```text
+外部 USB-TTL TX → PA3 / USART2_RX
+发送端 GND      → STM32 GND
+```
+
+精英板 V2 的 PA3 与 RS485_TX 受 P5 跳帽影响。使用 PA3 前按板卡资料处理 P5，确保 PA3 不被 RS485 发送端驱动。不要连接 RS485 A/B 端子，也不要接执行机构。
+
+MaixVision 无线连接不是 UART 物理链路；`analyze-raw` 只能验证复制的控制台文本。本阶段必须让串口助手通过 Type-C COM 口实际向 USART1_RX 发送字节流。
 
 ## 测试帧
 
