@@ -3,13 +3,22 @@
 #include "bridge_config.h"
 #include "mv_result.h"
 #include "target_aiming_state_machine.h"
+#include "protocol_track1.h"
+#include "manual_tracker_state.h"
 
 void vision_debug_bridge_init(void);
 void vision_debug_bridge_rx_byte(uint8_t byte);
 
 extern volatile Aim_Result g_latest_aim;
 extern volatile TargetAimingCommand g_latest_command;
+extern volatile Track1Packet g_latest_track1;
+extern volatile ManualTracker g_latest_track1_command;
+extern char g_latest_gimbal_dry_run[80];
 extern volatile uint8_t g_debug_tx_pending;
+extern volatile uint8_t g_debug_packet_kind;
+
+#define DEBUG_PACKET_AIM    1U
+#define DEBUG_PACKET_TRACK1 2U
 
 #define REG32(address) (*(volatile uint32_t *)(address))
 
@@ -164,6 +173,20 @@ static const char *state_to_string(TargetAimingState state)
 
 static void bridge_debug_print_latest(void)
 {
+    if (g_debug_packet_kind == DEBUG_PACKET_TRACK1) {
+        uart1_tx_str("$DBG,TRACK1");
+        uart1_tx_str(",EX=");  uart1_tx_int(g_latest_track1.error_x);
+        uart1_tx_str(",EY=");  uart1_tx_int(g_latest_track1.error_y);
+        uart1_tx_str(",PAN="); uart1_tx_int(g_latest_track1_command.pan_command);
+        uart1_tx_str(",TILT=");uart1_tx_int(g_latest_track1_command.tilt_command);
+        uart1_tx_str(",VALID=");uart1_tx_uint((uint32_t)g_latest_track1_command.valid);
+        uart1_tx_str(",STATUS=");uart1_tx_str((const char *)g_latest_track1.status);
+        uart1_tx_str(",STATE=");uart1_tx_str(manual_state_name(g_latest_track1_command.state));
+        uart1_tx_str("#\r\n");
+        return;
+    }
+
+    /* Original AIM response is intentionally unchanged. */
     uart1_tx_str("$DBG,AIM");
     uart1_tx_str(",EX=");  uart1_tx_int(g_latest_aim.aim_error_x);
     uart1_tx_str(",EY=");  uart1_tx_int(g_latest_aim.aim_error_y);

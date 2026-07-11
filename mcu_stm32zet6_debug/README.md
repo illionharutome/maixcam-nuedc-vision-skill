@@ -1,5 +1,7 @@
 # STM32ZET6 debug bridge 实板解析验证
 
+当前 Keil bridge 同时支持已验证 `$MV,AIM` 与新增 `$MV,TRACK1` dry-run。两种协议共用 USART1，但使用独立 parser 和状态机；建议值不连接 PWM 或执行机构。详细编译、烧录和测试步骤见 `keil_stm32f103zet6_bridge/README.md`。
+
 本目录只用于验证以下数据链路：
 
 ```text

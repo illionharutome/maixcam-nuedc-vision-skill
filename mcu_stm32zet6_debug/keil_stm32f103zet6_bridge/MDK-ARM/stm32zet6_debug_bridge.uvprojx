@@ -340,7 +340,7 @@
               <MiscControls></MiscControls>
               <Define>STM32F10X_HD</Define>
               <Undefine></Undefine>
-              <IncludePath>..\USER;..\..\..\mcu_common;..\..\..\mcu_tmx3507\app;..\..\examples</IncludePath>
+              <IncludePath>..\USER;..\..\..\mcu_common;..\..\..\mcu_tmx3507\app;..\..\examples;..\..\..\problems\2023E_manual_purple_tracking\mcu_stm32zet6</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -433,6 +433,31 @@
               <FileName>example_receive_aiming.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\examples\example_receive_aiming.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>TRACK1 Dry Run</GroupName>
+          <Files>
+            <File>
+              <FileName>protocol_track1.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\problems\2023E_manual_purple_tracking\mcu_stm32zet6\protocol_track1.c</FilePath>
+            </File>
+            <File>
+              <FileName>tracker_command.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\problems\2023E_manual_purple_tracking\mcu_stm32zet6\tracker_command.c</FilePath>
+            </File>
+            <File>
+              <FileName>manual_tracker_state.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\problems\2023E_manual_purple_tracking\mcu_stm32zet6\manual_tracker_state.c</FilePath>
+            </File>
+            <File>
+              <FileName>gimbal_board_interface.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\..\problems\2023E_manual_purple_tracking\mcu_stm32zet6\gimbal_board_interface.c</FilePath>
             </File>
           </Files>
         </Group>
