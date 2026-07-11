@@ -17,6 +17,8 @@ extern volatile ManualTracker g_latest_track1_command;
 extern char g_latest_gimbal_dry_run[80];
 extern volatile uint8_t g_debug_tx_pending;
 extern volatile uint8_t g_debug_packet_kind;
+extern volatile uint32_t g_gimbal_tx_count;
+extern volatile uint32_t g_gimbal_boot_sent;
 
 #define DEBUG_PACKET_AIM    1U
 #define DEBUG_PACKET_TRACK1 2U
@@ -252,6 +254,21 @@ int main(void)
             g_debug_tx_pending = 0U;
             bridge_debug_print_latest();
         }
+#if BRIDGE_GIMBAL_DRY_UART_BOOT_TEST
+        {
+            static uint32_t diag_tick;
+            ++diag_tick;
+            if (diag_tick >= 2000000UL) {
+                diag_tick = 0UL;
+                uart1_tx_str("$DBG,GMUART,EN=1,BOOT=");
+                uart1_tx_uint(g_gimbal_boot_sent);
+                uart1_tx_str(",TX_COUNT=");
+                uart1_tx_uint(g_gimbal_tx_count);
+                uart1_tx_str("#\r\n");
+            }
+            gimbal_dry_uart_boot_send();
+        }
+#endif
     }
 }
 

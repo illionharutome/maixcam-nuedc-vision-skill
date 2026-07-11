@@ -221,6 +221,25 @@ python problems\2023E_manual_purple_tracking\scripts\stm32_gimbal_dry_uart_check
 
 `--debug-port` 是 Type-C COM 口（USART1），`--gimbal-port` 是 USB-TTL COM 口（USART3_TX）。
 
+### 故障排查：GM TIMEOUT
+
+如果双串口测试中 DBG 正常但 GM 全部 TIMEOUT，按顺序排查：
+
+1. 确认 `BRIDGE_ENABLE_GIMBAL_DRY_UART = 1`
+2. 确认 Build + Download + Reset
+3. 确认 USB-TTL 对应 COM 口号
+4. 确认 PB10 → USB-TTL RX，GND → GND
+5. 临时设置 `BRIDGE_GIMBAL_DRY_UART_BOOT_TEST = 1`，Build + 烧录
+6. 运行监听脚本：
+   ```text
+   python problems\2023E_manual_purple_tracking\scripts\listen_gimbal_uart.py --port COM6
+   ```
+7. 若看到 `$GM,BOOT,USART3,OK#`，说明 USART3 物理链路 OK；继续排查 TRACK1 触发路径
+8. 若未见 BOOT 输出，问题在 USART3 初始化、PB10 引脚、Keil 工程或硬件接线
+9. USART1 侧可观察诊断行 `$DBG,GMUART,EN=1,BOOT=1,TX_COUNT=N#`，确认固件侧是否进入发送路径
+
+> 完成后将两个宏都改回 0，不要提交 BOOT_TEST=1 的配置。
+
 ---
 
 ## 自动串口验证

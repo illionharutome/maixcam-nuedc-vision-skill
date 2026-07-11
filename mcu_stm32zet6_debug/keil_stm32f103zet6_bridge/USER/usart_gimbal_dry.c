@@ -25,6 +25,9 @@
 #define USART_CR1_TE        (1UL << 3)
 #define USART_CR1_UE        (1UL << 13)
 
+volatile uint32_t g_gimbal_tx_count;
+volatile uint32_t g_gimbal_boot_sent;
+
 void gimbal_dry_uart_init(void)
 {
     RCC_APB2ENR |= RCC_APB2ENR_AFIOEN | RCC_APB2ENR_IOPBEN;
@@ -39,6 +42,9 @@ void gimbal_dry_uart_init(void)
     USART3_CR1 = 0UL;
     USART3_BRR = BRIDGE_GIMBAL_UART_BRR;
     USART3_CR1 = USART_CR1_UE | USART_CR1_TE;
+
+    g_gimbal_tx_count = 0UL;
+    g_gimbal_boot_sent = 0UL;
 }
 
 void gimbal_dry_uart_send_str(const char *s)
@@ -54,6 +60,16 @@ void gimbal_dry_uart_send_str(const char *s)
     while ((USART3_SR & USART_SR_TXE) == 0UL) {
     }
     USART3_DR = (uint32_t)'\n';
+    ++g_gimbal_tx_count;
 }
+
+#if BRIDGE_GIMBAL_DRY_UART_BOOT_TEST
+void gimbal_dry_uart_boot_send(void)
+{
+    if (g_gimbal_boot_sent != 0UL) return;
+    g_gimbal_boot_sent = 1UL;
+    gimbal_dry_uart_send_str("$GM,BOOT,USART3,OK#");
+}
+#endif
 
 #endif /* BRIDGE_ENABLE_GIMBAL_DRY_UART && BRIDGE_USE_USART1 */

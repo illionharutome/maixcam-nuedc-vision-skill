@@ -38,6 +38,11 @@
 #define BRIDGE_ENABLE_GIMBAL_DRY_UART  0
 #define BRIDGE_GIMBAL_UART_BAUD        115200UL
 
+/* Boot self-test: send $GM,BOOT,USART3,OK# once at startup via USART3.
+   Default 0. Set to 1 locally together with BRIDGE_ENABLE_GIMBAL_DRY_UART=1
+   to confirm physical USART3 link without needing a TRACK1 frame. */
+#define BRIDGE_GIMBAL_DRY_UART_BOOT_TEST  0
+
 #if BRIDGE_ENABLE_GIMBAL_DRY_UART
 #define BRIDGE_GIMBAL_UART_BRR  ((BRIDGE_PCLK1_HZ + (BRIDGE_GIMBAL_UART_BAUD / 2UL)) / BRIDGE_GIMBAL_UART_BAUD)
 #endif
