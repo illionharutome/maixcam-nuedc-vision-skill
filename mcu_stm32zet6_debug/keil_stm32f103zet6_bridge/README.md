@@ -131,3 +131,41 @@ g_latest_command.state
 ```
 
 预期：AIMING 更新误差和建议方向；NO_SPOT 时 `valid=0` 且建议归零；AIMED 时进入 locked/stable 且建议归零。全程不得把建议值接到 GPIO、PWM 或执行器。
+
+---
+
+## 自动串口验证
+
+固件在收到完整 `$MV,AIM` 帧后，会通过 **USART1_TX** 回传一行 `$DBG,AIM,...#` 调试文本。
+
+PC 端可用 Python 脚本自动完成发送、接收、解析、验证：
+
+```text
+python scripts\stm32_bridge_auto_check.py --port COM5 --baud 115200
+```
+
+脚本自动：
+1. 打开 Type-C / COM 口；
+2. 依次发送四帧 `$MV,AIM`；
+3. 每帧等待 `$DBG,AIM` 回传；
+4. 解析 DBG，检查 EX/EY/PAN/TILT/VALID/STATUS/STATE；
+5. 输出每帧 PASS/FAIL 及汇总；
+6. 保存日志到 `logs/serial/stm32_bridge_auto_check.txt`。
+
+### 可选 DeepSeek API 分析
+
+```text
+set DEEPSEEK_API_KEY=你的key
+python scripts\stm32_bridge_auto_check.py --port COM5 --baud 115200 --deepseek
+```
+
+DeepSeek 仅分析脚本采集到的串口日志，**不直接访问 Keil Watch**，**不控制任何硬件**。
+
+> API key 通过环境变量传入，不写在代码里，不提交 Git。
+
+### 前提条件
+
+- 已安装 pyserial：`pip install pyserial`
+- 固件已通过 ST-Link 下载到 ZET6 且正在运行
+- FlyMcu / 其他串口工具已关闭，不占用 COM 口
+- STM32ZET6 仍然是 debug bridge，最终主控仍然是天猛星 MSPM0G3507

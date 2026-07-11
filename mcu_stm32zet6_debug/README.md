@@ -121,3 +121,40 @@ g_latest_command.state
 4. `NO_SPOT` 时 `valid=0` 且 pan/tilt 为 0；
 5. 全程没有 PID、PWM 或执行机构动作；
 6. 405nm 保持禁用，仍不使用真实激光、YOLO、小车或机械臂功能。
+
+---
+
+## 7. 自动串口验证（Python 脚本）
+
+固件在收到完整 `$MV,AIM` 帧后通过 USART1_TX 回传 `$DBG,AIM,...#`。可用脚本自动验证：
+
+```text
+python scripts\stm32_bridge_auto_check.py --port COM5 --baud 115200
+```
+
+脚本流程：
+
+1. 打开 Type-C 枚举的 COM 口；
+2. 自动发送四帧 `$MV,AIM`；
+3. 每帧等待 `$DBG,AIM` 回传并解析；
+4. 按预期字段判断每帧 PASS/FAIL；
+5. 打印汇总，输出日志到 `logs/serial/stm32_bridge_auto_check.txt`。
+
+看到 `OVERALL: PASS` 即说明 PC → USART1 → parser → state machine → DBG 回传链路通过。
+
+### 可选 DeepSeek API 分析
+
+```text
+set DEEPSEEK_API_KEY=你的key
+python scripts\stm32_bridge_auto_check.py --port COM5 --baud 115200 --deepseek
+```
+
+DeepSeek 仅分析本地串口日志文本，不直接访问 Keil Watch，不控制硬件。
+
+### 前置
+
+- `pip install pyserial`
+- ST-Link 已 Download 固件，ZET6 正在运行
+- 关闭 FlyMcu / 其他占用 COM 口的工具
+- 本阶段不接真实激光、云台、舵机、小车、机械臂、PWM
+- STM32ZET6 仍是 debug bridge，天猛星 MSPM0G3507 仍是最终主控
