@@ -18,3 +18,4 @@ __pycache__/
 .idea/
 tmp/
 DCC-100双路步进电机驱动模块资料/
+camera_sweep_*/

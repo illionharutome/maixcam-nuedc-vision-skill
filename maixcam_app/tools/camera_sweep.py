@@ -19,6 +19,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from maixcam_app.main import MODULES, load_config
+from maixcam_app.tools.session_utils import prepare_session
 
 
 def _number_list(text: str) -> list[int]:
@@ -87,6 +88,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--module", choices=sorted(MODULES), default="laser_spot")
     parser.add_argument("--config", default="maixcam_app/configs/purple_to_blue_wall.yaml")
     parser.add_argument("--session", required=True)
+    parser.add_argument("--overwrite", action="store_true",
+                        help="delete and reuse the exact session; default creates a numbered suffix")
     parser.add_argument("--scene", required=True)
     parser.add_argument("--lighting", default="unknown")
     parser.add_argument("--distance-mm", type=int, default=0)
@@ -105,9 +108,8 @@ def main() -> None:
     args = parse_args()
     from maix import app, camera, display, image
 
-    session = Path("logs/tuning") / args.session
-    if session.exists() and any(session.iterdir()):
-        raise FileExistsError(f"session already contains data: {session}")
+    session = prepare_session(Path("logs/tuning"), args.session, overwrite=args.overwrite)
+    print(f"session: {session}")
     images_dir = session / "representatives"
     images_dir.mkdir(parents=True, exist_ok=True)
     config = load_config(args.config)
@@ -142,7 +144,6 @@ def main() -> None:
                 cam.exp_mode(camera.AeMode.Manual)
                 condition["exposure_us"] = int(cam.exposure(int(condition["exposure_us"])))
                 condition["gain"] = int(cam.gain(int(condition["gain"])))
-            cam.clear_buff()
             cam.skip_frames(max(1, args.settle_frames))
             condition["measured_exposure_us"] = int(cam.exposure())
             condition["measured_gain"] = int(cam.gain())

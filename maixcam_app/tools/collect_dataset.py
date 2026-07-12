@@ -16,6 +16,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from maixcam_app.main import MODULES, load_config
+from maixcam_app.tools.session_utils import prepare_session
 
 
 def parse_args() -> argparse.Namespace:
@@ -23,6 +24,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--module", choices=sorted(MODULES), default="laser_spot")
     parser.add_argument("--config", default="maixcam_app/configs/purple_to_blue_wall.yaml")
     parser.add_argument("--session", required=True, help="new name below logs/tuning")
+    parser.add_argument("--overwrite", action="store_true",
+                        help="delete and reuse the exact session; default creates a numbered suffix")
     parser.add_argument("--scene", required=True, help="stable scene label, e.g. indoor_white_wall")
     parser.add_argument("--lighting", default="unknown", help="e.g. bright, dim, backlight")
     parser.add_argument("--distance-mm", type=int, default=0)
@@ -51,9 +54,8 @@ def main() -> None:
     import cv2
     from maix import app, camera, image
 
-    session = Path("logs/tuning") / args.session
-    if session.exists() and any(session.iterdir()):
-        raise FileExistsError(f"session already contains data: {session}")
+    session = prepare_session(Path("logs/tuning"), args.session, overwrite=args.overwrite)
+    print(f"session: {session}")
     samples = session / "samples"
     samples.mkdir(parents=True, exist_ok=True)
     shutil.copy2(args.config, session / "current_config.yaml")

@@ -19,4 +19,6 @@
 - `replay_test.py`：输出全局及逐场景指标，拒绝不完整数据集。
 - `parameter_sweep.py`：对嵌套 YAML 参数做有上限的确定性网格搜索。
 
+采集和相机扫描工具默认保留旧 session 并自动追加 `_002` 等后缀；只有显式传入 `--overwrite` 才复用同名目录。
+
 完整命令见 `docs/vision_optimization.md`。

@@ -13,6 +13,7 @@ from maixcam_app.tools.dataset_schema import save_truth, validate_dataset
 from maixcam_app.tools.camera_sweep import analyze_frame, summarize_condition
 from maixcam_app.tools.parameter_sweep import set_nested
 from maixcam_app.tools.replay_test import evaluate_directory
+from maixcam_app.tools.session_utils import prepare_session
 
 
 class VisionTests(unittest.TestCase):
@@ -73,6 +74,23 @@ class VisionTests(unittest.TestCase):
         summary = summarize_condition([analyzed, analyzed], 0.1, "present")
         self.assertEqual(summary["detection_rate"], 1.0)
         self.assertEqual(summary["target_jitter_px"], 0.0)
+
+    def test_session_auto_suffix_and_overwrite(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "logs" / "tuning"
+            first = prepare_session(root, "laser_run")
+            (first / "result.json").write_text("{}", encoding="utf-8")
+            second = prepare_session(root, "laser_run")
+            self.assertEqual(second.name, "laser_run_002")
+            (second / "result.json").write_text("{}", encoding="utf-8")
+            overwritten = prepare_session(root, "laser_run", overwrite=True)
+            self.assertEqual(overwritten, first)
+            self.assertEqual(list(overwritten.iterdir()), [])
+
+    def test_session_rejects_path_escape(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            with self.assertRaises(ValueError):
+                prepare_session(Path(temporary), "../outside", overwrite=True)
 
 
 if __name__ == "__main__":
