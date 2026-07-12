@@ -13,6 +13,7 @@
 ## 视觉优化工具
 
 - `collect_dataset.py`：在 MaixCAM 上记录相机/场景元数据、处理耗时和代表帧。
+- `camera_sweep.py`：读取自动曝光/增益/白平衡基线，并扫描手动曝光与增益。
 - `annotate_samples.py`：在电脑端点击目标中心或标记无目标。
 - `dataset_report.py`：检查标注完整性、正负样本和场景覆盖。
 - `replay_test.py`：输出全局及逐场景指标，拒绝不完整数据集。

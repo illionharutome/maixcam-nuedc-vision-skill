@@ -4,7 +4,22 @@
 
 ## 1. 固定相机条件
 
-记录分辨率、镜头焦距、曝光、增益、白平衡、安装高度和俯角。同一轮参数对比期间不得改变这些条件。颜色任务优先手动曝光和白平衡；如果必须自动曝光，要把不同稳定状态作为不同场景采集。
+先探测当前自动参数，再扫描手动曝光/增益，不要一开始就假定比赛参数：
+
+```bash
+python maixcam_app/tools/camera_sweep.py \
+  --module laser_spot \
+  --config maixcam_app/configs/purple_to_blue_wall.yaml \
+  --session camera_sweep_indoor_laser_on_01 \
+  --scene indoor_white_wall \
+  --lighting current \
+  --distance-mm 1000 \
+  --expected present
+```
+
+工具读取自动曝光、增益、ISO、白平衡和相机 FPS，再扫描 250–8000 us。它输出 `camera_sweep.json` 和每个条件的代表图。`diagnostic_score` 只用于缩小候选范围，不替代正负样本标注评分。
+
+记录分辨率、镜头焦距、曝光、增益、白平衡、安装高度和俯角。同一轮参数对比期间不得改变这些条件。颜色任务优先评估手动曝光和白平衡；如果保留自动曝光，要把不同稳定状态作为不同场景采集。
 
 ## 2. 在 MaixCAM 采集
 

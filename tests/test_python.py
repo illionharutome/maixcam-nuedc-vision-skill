@@ -10,6 +10,7 @@ from maixcam_app.comm.uart_protocol import encode_vision_result
 from maixcam_app.main import load_config
 from maixcam_app.modules.laser_spot import LaserSpotModule
 from maixcam_app.tools.dataset_schema import save_truth, validate_dataset
+from maixcam_app.tools.camera_sweep import analyze_frame, summarize_condition
 from maixcam_app.tools.parameter_sweep import set_nested
 from maixcam_app.tools.replay_test import evaluate_directory
 
@@ -61,6 +62,17 @@ class VisionTests(unittest.TestCase):
             cv2.imwrite(str(Path(temporary) / "unlabeled.png"), np.zeros((20, 20, 3), dtype=np.uint8))
             with self.assertRaisesRegex(ValueError, "not ready"):
                 evaluate_directory("maixcam_app/configs/purple_to_blue_wall.yaml", temporary)
+
+    def test_camera_sweep_frame_statistics(self):
+        frame = np.full((20, 30, 3), 255, dtype=np.uint8)
+        result = {"ok": True, "confidence": 0.8, "target_x": 10, "target_y": 12,
+                  "extra": {"area": 8, "circularity": 0.9}}
+        analyzed = analyze_frame(frame, result)
+        self.assertEqual(analyzed["brightness_mean"], 255.0)
+        self.assertEqual(analyzed["overexposed_ratio"], 1.0)
+        summary = summarize_condition([analyzed, analyzed], 0.1, "present")
+        self.assertEqual(summary["detection_rate"], 1.0)
+        self.assertEqual(summary["target_jitter_px"], 0.0)
 
 
 if __name__ == "__main__":

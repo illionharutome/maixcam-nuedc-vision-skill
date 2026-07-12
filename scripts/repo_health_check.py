@@ -33,6 +33,7 @@ def main() -> int:
     exists("UART protocol", "controller_tmx_mspm0/protocol.md")
     exists("DeepSeek tuning", "maixcam_app/tools/tune_with_deepseek.py")
     exists("Ground-truth annotation", "maixcam_app/tools/annotate_samples.py")
+    exists("Camera parameter sweep", "maixcam_app/tools/camera_sweep.py")
     exists("Dataset validation", "maixcam_app/tools/dataset_report.py")
     exists("Parameter sweep", "maixcam_app/tools/parameter_sweep.py")
     exists("YOLO training", "yolo_training/README.md")

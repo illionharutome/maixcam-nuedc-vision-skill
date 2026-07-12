@@ -76,8 +76,6 @@ def main() -> None:
         },
         "sampling": {"every": args.sample_every, "format": args.image_format, "save_failures": args.save_failures},
     }
-    (session / "session.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-
     detector = MODULES[args.module](load_config(args.config))
     cam = camera.Camera(args.width, args.height, image.Format.FMT_BGR888, buff_num=1)
     if args.exposure_us is not None:
@@ -88,6 +86,12 @@ def main() -> None:
         cam.awb_mode(camera.AwbMode.Manual)
         cam.set_wb_gain(list(args.wb_gain))
     cam.skip_frames(30)
+    metadata["camera"]["actual_exposure_us"] = int(cam.exposure())
+    metadata["camera"]["actual_gain"] = int(cam.gain())
+    metadata["camera"]["actual_iso"] = int(cam.iso())
+    metadata["camera"]["actual_wb_gain"] = [float(value) for value in cam.set_wb_gain()]
+    metadata["camera"]["actual_fps"] = float(cam.fps())
+    (session / "session.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     frame_id = detected = saved = 0
     processing_ms: list[float] = []

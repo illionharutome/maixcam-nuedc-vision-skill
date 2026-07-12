@@ -32,6 +32,7 @@ description: Build, migrate, tune, test, or troubleshoot electronic-design-compe
 ## Tune safely
 
 - Follow `docs/vision_optimization.md` for capture, point annotation, dataset validation, scene-stratified replay, and bounded parameter sweeps.
+- Measure the current auto exposure/gain/white-balance baseline and run a bounded manual sweep before freezing camera parameters.
 - Use MaixVision only for human observation and overlays. Do not treat its GUI as API input.
 - Collect explicit sampling sessions under `logs/tuning/`; never write every frame during competition mode.
 - Refuse formal scoring when any sample is unlabeled or when the set lacks positive or negative cases. Treat host replay FPS as diagnostic; use only an explicit MaixCAM-measured FPS in the score.
