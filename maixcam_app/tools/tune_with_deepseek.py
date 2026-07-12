@@ -73,7 +73,9 @@ def main() -> None:
     candidate_dir.mkdir(parents=True, exist_ok=True)
     candidate_path = candidate_dir / f"candidate_{stamp}.yaml"
     candidate_path.write_text(json.dumps(response["candidate"], ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    metrics = evaluate_directory(str(candidate_path), str(session / "samples"), args.module)
+    session_metrics = json.loads((session / "metrics.json").read_text(encoding="utf-8"))
+    scoring_fps = float(session_metrics.get("capture_fps", session_metrics.get("fps", 0.0)))
+    metrics = evaluate_directory(str(candidate_path), str(session / "samples"), args.module, scoring_fps=scoring_fps)
     metrics_path = candidate_path.with_suffix(".metrics.json")
     metrics_path.write_text(json.dumps(metrics, indent=2) + "\n", encoding="utf-8")
     best_dir = ROOT / "maixcam_app/configs/best"
@@ -92,4 +94,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

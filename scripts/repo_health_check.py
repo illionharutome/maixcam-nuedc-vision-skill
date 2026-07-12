@@ -32,6 +32,9 @@ def main() -> int:
     exists("DCC migration notes", "controller_tmx_mspm0/dcc_reference_notes.md")
     exists("UART protocol", "controller_tmx_mspm0/protocol.md")
     exists("DeepSeek tuning", "maixcam_app/tools/tune_with_deepseek.py")
+    exists("Ground-truth annotation", "maixcam_app/tools/annotate_samples.py")
+    exists("Dataset validation", "maixcam_app/tools/dataset_report.py")
+    exists("Parameter sweep", "maixcam_app/tools/parameter_sweep.py")
     exists("YOLO training", "yolo_training/README.md")
     exists("Git ignore", ".gitignore")
     base_text = (ROOT / "maixcam_app/modules/base.py").read_text(encoding="utf-8")
@@ -82,4 +85,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

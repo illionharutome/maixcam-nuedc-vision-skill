@@ -10,3 +10,12 @@
 - <https://wiki.sipeed.com/maixpy/doc/en/vision/opencv.html>
 - <https://wiki.sipeed.com/maixpy/doc/en/peripheral/uart.html>
 
+## 视觉优化工具
+
+- `collect_dataset.py`：在 MaixCAM 上记录相机/场景元数据、处理耗时和代表帧。
+- `annotate_samples.py`：在电脑端点击目标中心或标记无目标。
+- `dataset_report.py`：检查标注完整性、正负样本和场景覆盖。
+- `replay_test.py`：输出全局及逐场景指标，拒绝不完整数据集。
+- `parameter_sweep.py`：对嵌套 YAML 参数做有上限的确定性网格搜索。
+
+完整命令见 `docs/vision_optimization.md`。

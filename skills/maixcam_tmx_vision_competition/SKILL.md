@@ -31,8 +31,10 @@ description: Build, migrate, tune, test, or troubleshoot electronic-design-compe
 
 ## Tune safely
 
+- Follow `docs/vision_optimization.md` for capture, point annotation, dataset validation, scene-stratified replay, and bounded parameter sweeps.
 - Use MaixVision only for human observation and overlays. Do not treat its GUI as API input.
 - Collect explicit sampling sessions under `logs/tuning/`; never write every frame during competition mode.
+- Refuse formal scoring when any sample is unlabeled or when the set lacks positive or negative cases. Treat host replay FPS as diagnostic; use only an explicit MaixCAM-measured FPS in the score.
 - Let DeepSeek read only `frames.jsonl`, `metrics.json`, `current_config.yaml`, and `failure_cases.json`.
 - Read `DEEPSEEK_API_KEY` and `DEEPSEEK_MODEL` only from environment variables. Require strict JSON candidate output.
 - Save candidates under `configs/candidates/`, replay them, compute the repository score, and promote only a strictly higher score to `configs/best/current_best.yaml`.

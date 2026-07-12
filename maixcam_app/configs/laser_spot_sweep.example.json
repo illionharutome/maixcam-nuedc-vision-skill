@@ -1,0 +1,5 @@
+{
+  "filters.min_area": [2, 3, 5],
+  "filters.min_circularity": [0.2, 0.28, 0.36],
+  "tracking.max_jump_px": [50, 70]
+}
