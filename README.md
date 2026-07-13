@@ -18,7 +18,7 @@
 
 所有模块继承 `VisionModule`，输出同一个 `VisionResult`：`ok/mode/target/center/dx/dy/confidence/distance/status/extra`。激光、色块、线、圆和边框优先传统视觉；复杂类别、数字或符号才用 YOLO。参数全部放 `maixcam_app/configs/*.yaml`（仓库默认文件采用无依赖的 JSON 语法，仍是合法 YAML 1.2）。
 
-`laser_spot` 支持 LAB、HSV、亮度、ROI、面积、圆度、上一帧距离约束、丢帧保持和 debug overlay。紫光打墙偏蓝/偏白/过曝时先调整 `purple_to_blue_wall.yaml`，不要硬改代码。
+`laser_spot` 支持 LAB、HSV、亮度、蓝/红通道优势、ROI、面积、圆度、上一帧距离约束、丢帧保持和 debug overlay。紫光使用 `purple_to_blue_wall.yaml`；红光从 `red_laser_wall.yaml` 开始标定。
 
 ## 天猛星与 DCC-100
 
@@ -46,7 +46,7 @@ $MV,AIM,1,160,120,148,132,-12,12,91,256,AIMING#
 ## 现场命令
 
 ```bash
-python maixcam_app/main.py --module laser_spot --config maixcam_app/configs/purple_to_blue_wall.yaml --uart /dev/ttyS0 --debug
+python maixcam_app/main.py --module laser_spot --config maixcam_app/configs/purple_to_blue_wall.yaml --uart /dev/ttyS1 --debug
 python maixcam_app/tools/collect_dataset.py --module laser_spot --session purple_wall_001
 python maixcam_app/tools/replay_test.py --config maixcam_app/configs/purple_to_blue_wall.yaml --samples logs/tuning/session_xxx/samples
 python maixcam_app/tools/tune_with_deepseek.py --session logs/tuning/session_xxx

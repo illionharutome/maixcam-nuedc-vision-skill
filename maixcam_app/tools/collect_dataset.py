@@ -39,7 +39,25 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--image-format", choices=("png", "jpg"), default="png")
     parser.add_argument("--save-failures", action="store_true", help="save every missed frame; may use much storage")
     parser.add_argument("--max-frames", type=int, default=0)
+    parser.add_argument("--no-display", action="store_true", help="disable the live annotated camera preview")
     return parser.parse_args()
+
+
+def apply_capture_camera_settings(cam, camera_api, exposure_us: int | None, gain: int | None,
+                                  wb_gain: list[float] | None) -> None:
+    if exposure_us is not None or gain is not None:
+        cam.exp_mode(camera_api.AeMode.Manual)
+        if exposure_us is not None:
+            cam.exposure(exposure_us)
+        if gain is not None:
+            cam.gain(gain)
+    else:
+        cam.exp_mode(camera_api.AeMode.Auto)
+    if wb_gain is not None:
+        cam.awb_mode(camera_api.AwbMode.Manual)
+        cam.set_wb_gain(list(wb_gain))
+    else:
+        cam.awb_mode(camera_api.AwbMode.Auto)
 
 
 def _percentile(values: list[float], fraction: float) -> float:
@@ -52,7 +70,7 @@ def _percentile(values: list[float], fraction: float) -> float:
 def main() -> None:
     args = parse_args()
     import cv2
-    from maix import app, camera, image
+    from maix import app, camera, display, image
 
     session = prepare_session(Path("logs/tuning"), args.session, overwrite=args.overwrite)
     print(f"session: {session}")
@@ -80,13 +98,8 @@ def main() -> None:
     }
     detector = MODULES[args.module](load_config(args.config))
     cam = camera.Camera(args.width, args.height, image.Format.FMT_BGR888, buff_num=1)
-    if args.exposure_us is not None:
-        cam.exposure(args.exposure_us)
-    if args.gain is not None:
-        cam.gain(args.gain)
-    if args.wb_gain is not None:
-        cam.awb_mode(camera.AwbMode.Manual)
-        cam.set_wb_gain(list(args.wb_gain))
+    disp = None if args.no_display else display.Display()
+    apply_capture_camera_settings(cam, camera, args.exposure_us, args.gain, args.wb_gain)
     cam.skip_frames(30)
     metadata["camera"]["actual_exposure_us"] = int(cam.exposure())
     metadata["camera"]["actual_gain"] = int(cam.gain())
@@ -108,6 +121,12 @@ def main() -> None:
             process_started = time.perf_counter()
             result = detector.process(frame)
             duration_ms = (time.perf_counter() - process_started) * 1000.0
+            if disp is not None:
+                preview = detector.draw_debug(frame.copy(), result)
+                cv2.putText(preview, f"frame={frame_id} exp={cam.exposure()} gain={cam.gain()}",
+                            (5, args.height - 8), cv2.FONT_HERSHEY_SIMPLEX,
+                            0.42, (0, 255, 255), 1, cv2.LINE_AA)
+                disp.show(image.cv2image(preview, bgr=True, copy=False))
             processing_ms.append(duration_ms)
             detected += int(result["ok"])
             elapsed = max(time.perf_counter() - started, 1e-9)
@@ -149,6 +168,9 @@ def main() -> None:
         "note": "Detection rate is provisional until samples/ground_truth.json is manually labeled.",
     }
     (session / "metrics.json").write_text(json.dumps(metrics, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    cam.exp_mode(camera.AeMode.Auto)
+    cam.awb_mode(camera.AwbMode.Auto)
+    cam.close()
     print(f"saved {saved} samples in {session}; label them before replay scoring")
 
 

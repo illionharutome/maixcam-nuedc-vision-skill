@@ -11,12 +11,50 @@ from maixcam_app.main import apply_camera_profile, load_config, resolve_camera_p
 from maixcam_app.modules.laser_spot import LaserSpotModule
 from maixcam_app.tools.dataset_schema import save_truth, validate_dataset
 from maixcam_app.tools.camera_sweep import analyze_frame, summarize_condition
+from maixcam_app.tools.collect_dataset import apply_capture_camera_settings
 from maixcam_app.tools.parameter_sweep import set_nested
 from maixcam_app.tools.replay_test import evaluate_directory
 from maixcam_app.tools.session_utils import prepare_session
 
 
 class VisionTests(unittest.TestCase):
+    def test_red_laser_config_detects_red_excess(self):
+        image = np.full((240, 320, 3), 30, dtype=np.uint8)
+        image[132, 148] = (20, 25, 90)
+        module = LaserSpotModule(load_config("maixcam_app/configs/red_laser_wall.yaml"))
+        result = module.process(image)
+        self.assertTrue(result["ok"])
+        self.assertEqual((result["target_x"], result["target_y"]), (148, 132))
+
+    def test_dataset_capture_enters_explicit_manual_mode(self):
+        class FakeCameraApi:
+            class AeMode:
+                Manual = "manual"
+                Auto = "auto"
+
+            class AwbMode:
+                Manual = "manual_wb"
+                Auto = "auto_wb"
+
+        class FakeCamera:
+            def __init__(self):
+                self.calls = []
+
+            def exp_mode(self, value): self.calls.append(("exp_mode", value))
+            def exposure(self, value): self.calls.append(("exposure", value))
+            def gain(self, value): self.calls.append(("gain", value))
+            def awb_mode(self, value): self.calls.append(("awb_mode", value))
+            def set_wb_gain(self, value): self.calls.append(("wb_gain", value))
+
+        cam = FakeCamera()
+        apply_capture_camera_settings(cam, FakeCameraApi, 600, 1024, None)
+        self.assertEqual(cam.calls, [
+            ("exp_mode", "manual"),
+            ("exposure", 600),
+            ("gain", 1024),
+            ("awb_mode", "auto_wb"),
+        ])
+
     def test_maixcam_uses_dedicated_uart1_pinmap(self):
         self.assertEqual(uart_pin_functions("/dev/ttyS1"), [
             ("A19", "UART1_TX"),

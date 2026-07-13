@@ -21,6 +21,9 @@ def _range_mask(image: np.ndarray, space: str, lower: list[int], upper: list[int
     elif space == "blue_excess":
         blue, green, red = cv2.split(image.astype(np.int16))
         converted = np.clip(blue - np.maximum(green, red), 0, 255).astype(np.uint8)
+    elif space == "red_excess":
+        blue, green, red = cv2.split(image.astype(np.int16))
+        converted = np.clip(red - np.maximum(green, blue), 0, 255).astype(np.uint8)
     else:
         raise ValueError(f"unsupported color space: {space}")
     return cv2.inRange(converted, np.array(lower, dtype=np.uint8), np.array(upper, dtype=np.uint8))
@@ -43,7 +46,7 @@ class ColorBlobModule(VisionModule):
             space = str(rule["space"]).lower()
             lower = rule["lower"]
             upper = rule["upper"]
-            if space in {"brightness", "blue_excess"}:
+            if space in {"brightness", "blue_excess", "red_excess"}:
                 lower, upper = [int(lower)], [int(upper)]
             masks.append(_range_mask(roi_img, space, lower, upper))
         if not masks:

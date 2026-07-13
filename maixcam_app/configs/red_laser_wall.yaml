@@ -1,0 +1,21 @@
+{
+  "target_name": "red_laser_wall",
+  "camera": {
+    "width": 320,
+    "height": 240,
+    "exposure_mode": "auto",
+    "exposure_us": 0,
+    "gain": 0,
+    "awb_mode": "auto",
+    "settle_frames": 30
+  },
+  "threshold_strategy": "and",
+  "thresholds": [
+    {"space": "red_excess", "enabled": true, "lower": 10, "upper": 255},
+    {"space": "brightness", "enabled": true, "lower": 20, "upper": 255}
+  ],
+  "roi": [20, 20, 280, 200],
+  "filters": {"min_area": 1, "max_area": 600, "min_circularity": 0.1},
+  "morphology": {"kernel": 1},
+  "tracking": {"max_jump_px": 70, "hold_frames": 4}
+}
