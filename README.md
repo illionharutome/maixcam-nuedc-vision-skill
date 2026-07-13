@@ -20,7 +20,7 @@
 
 `laser_spot` 支持 LAB、HSV、亮度、蓝/红通道优势、ROI、面积、圆度、上一帧距离约束、丢帧保持和 debug overlay。紫光使用 `purple_to_blue_wall.yaml`；红光从 `red_laser_wall.yaml` 开始标定。
 
-2023 E 题当前提供两种可切换的追踪参考：`e23_red_center_track.yaml` 让红光回到相机中心，适合首轮云台联调；`e23_dual_laser_track.yaml` 直接计算红光与云台蓝紫光的像素差。`e23_a4_black_frame.yaml` 用于 A4 黑胶带旋转矩形、四角和边线路径提取。
+2023 E 题当前提供两种可切换的追踪参考：`e23_red_center_track.yaml` 让红光回到相机中心，适合首轮云台联调；`e23_dual_laser_track.yaml` 直接计算红光与云台蓝紫光的像素差。两种配置都会先识别 A4 黑框，再把光点检测限制在向内收缩的旋转四边形 ROI 中；持续丢框或只有框外光点时输出无目标。`e23_a4_black_frame.yaml` 可单独调试黑胶带旋转矩形、四角和边线路径提取。
 
 ## 天猛星与 DCC-100
 

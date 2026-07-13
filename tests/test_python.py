@@ -22,7 +22,8 @@ from maixcam_app.tools.session_utils import prepare_session
 class VisionTests(unittest.TestCase):
     def test_e23_red_target_tracks_image_center(self):
         config = load_config("maixcam_app/configs/e23_red_center_track.yaml")
-        image = np.full((240, 320, 3), 70, dtype=np.uint8)
+        image = np.full((240, 320, 3), 220, dtype=np.uint8)
+        cv2.rectangle(image, (65, 35), (255, 205), (10, 10, 10), 10)
         cv2.circle(image, (190, 100), 2, (30, 35, 150), -1)
         result = E23TrackModule(config).process(image)
         self.assertTrue(result["ok"])
@@ -32,13 +33,34 @@ class VisionTests(unittest.TestCase):
 
     def test_e23_dual_laser_uses_tracking_spot_as_reference(self):
         config = load_config("maixcam_app/configs/e23_dual_laser_track.yaml")
-        image = np.full((240, 320, 3), 50, dtype=np.uint8)
+        image = np.full((240, 320, 3), 220, dtype=np.uint8)
+        cv2.rectangle(image, (65, 35), (255, 205), (10, 10, 10), 10)
         cv2.circle(image, (190, 100), 2, (30, 35, 150), -1)
         cv2.circle(image, (170, 110), 2, (150, 45, 70), -1)
         result = E23TrackModule(config).process(image)
         self.assertTrue(result["ok"])
         self.assertEqual((result["center_x"], result["center_y"]), (170, 110))
         self.assertEqual((result["dx"], result["dy"]), (20, -10))
+
+    def test_e23_frame_roi_rejects_larger_red_distractor_outside_frame(self):
+        config = load_config("maixcam_app/configs/e23_red_center_track.yaml")
+        image = np.full((240, 320, 3), 220, dtype=np.uint8)
+        cv2.rectangle(image, (70, 40), (250, 200), (10, 10, 10), 10)
+        cv2.circle(image, (190, 100), 2, (30, 35, 150), -1)
+        cv2.circle(image, (30, 25), 7, (20, 25, 200), -1)
+        result = E23TrackModule(config).process(image)
+        self.assertTrue(result["ok"])
+        self.assertEqual((result["target_x"], result["target_y"]), (190, 100))
+        self.assertEqual(len(result["extra"]["frame_roi_corners"]), 4)
+
+    def test_e23_requires_frame_before_accepting_red_target(self):
+        config = load_config("maixcam_app/configs/e23_red_center_track.yaml")
+        image = np.full((240, 320, 3), 220, dtype=np.uint8)
+        cv2.circle(image, (190, 100), 4, (30, 35, 150), -1)
+        result = E23TrackModule(config).process(image)
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["extra"]["reason"], "frame_missing")
+        self.assertEqual((result["dx"], result["dy"]), (0, 0))
 
     def test_rotated_a4_frame_returns_ordered_corners_and_path(self):
         config = load_config("maixcam_app/configs/e23_a4_black_frame.yaml")

@@ -12,6 +12,10 @@ class TargetTracker:
         self.last: tuple[int, int] | None = None
         self.lost_frames = 0
 
+    def reset(self) -> None:
+        self.last = None
+        self.lost_frames = 0
+
     def choose(self, candidates: list[dict]) -> dict | None:
         if not candidates:
             self.lost_frames += 1
@@ -32,4 +36,3 @@ class TargetTracker:
         if self.last is not None and self.lost_frames <= self.hold_frames:
             return self.last
         return None
-

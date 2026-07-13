@@ -60,12 +60,20 @@ class ColorBlobModule(VisionModule):
         mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, shape)
         return cv2.morphologyEx(mask, cv2.MORPH_CLOSE, shape)
 
-    def process(self, img) -> dict:
+    def reset_tracking(self) -> None:
+        self.tracker.reset()
+        self.last_contour = None
+
+    def process(self, img, roi_mask: np.ndarray | None = None) -> dict:
         height, width = img.shape[:2]
         x, y, w, h = self.config.get("roi", [0, 0, width, height])
         x, y = max(0, int(x)), max(0, int(y))
         w, h = min(int(w), width - x), min(int(h), height - y)
         mask = self._mask(img[y:y + h, x:x + w])
+        if roi_mask is not None:
+            if roi_mask.shape[:2] != (height, width):
+                raise ValueError("roi_mask must match the input image size")
+            mask = cv2.bitwise_and(mask, roi_mask[y:y + h, x:x + w].astype(np.uint8))
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         minimum = float(self.config.get("filters", {}).get("min_area", 3))
         maximum = float(self.config.get("filters", {}).get("max_area", 2000))
