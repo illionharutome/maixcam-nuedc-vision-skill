@@ -1,10 +1,11 @@
-# MaixCAM Pro → 天猛星 ASCII UART 协议
+# MaixCAM Pro → MSPM0G3507 ASCII UART 协议
 
 ## 物理层
 
 - 115200 baud，8N1，3.3V TTL。
 - MaixCAM TX 接 MSPM0 RX；两板必须共地。
-- 建议优先 UART1，避免 UART0 启动日志；若使用 `/dev/ttyS0`，主控解析器会忽略 `$MV` 之外的文本。
+- MaixCAM Pro 默认使用 UART1：A19/TX、A18/RX、`/dev/ttyS1`，避免 UART0 启动日志。
+- LP-MSPM0G3507 阶段使用 PA9/UART1_RX 接收；最终移植到天猛星时保持协议不变，只替换板级引脚配置。
 
 ## 帧格式
 

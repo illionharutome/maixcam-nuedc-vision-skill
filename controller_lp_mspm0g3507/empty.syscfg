@@ -1,0 +1,78 @@
+/**
+ * @cliArgs --device "MSPM0G350X" --part "Default" --package "LQFP-64(PM)" --product "mspm0_sdk@2.10.00.04"
+ * @v2CliArgs --device "MSPM0G3507" --package "LQFP-64(PM)" --product "mspm0_sdk@2.10.00.04"
+ * @versions {"tool":"1.26.2+4477"}
+ */
+/** LP-MSPM0G3507: dual DCC-100 PWM, MaixCAM UART1, XDS110 debug UART0. */
+const GPIO = scripting.addModule("/ti/driverlib/GPIO", {}, false);
+const STEP_MOTOR = GPIO.addInstance();
+const PWM = scripting.addModule("/ti/driverlib/PWM", {}, false);
+const PWM2 = PWM.addInstance();
+const PWM1 = PWM.addInstance();
+const UART = scripting.addModule("/ti/driverlib/UART", {}, false);
+const VISION_UART = UART.addInstance();
+const DEBUG_UART = UART.addInstance();
+const SYSCTL = scripting.addModule("/ti/driverlib/SYSCTL");
+const Board = scripting.addModule("/ti/driverlib/Board", {}, false);
+
+STEP_MOTOR.$name = "STEP_MOTOR";
+STEP_MOTOR.associatedPins.create(8);
+STEP_MOTOR.associatedPins[0].$name = "DIR2";
+STEP_MOTOR.associatedPins[0].pin.$assign = "PA13";
+STEP_MOTOR.associatedPins[1].$name = "DCY2";
+STEP_MOTOR.associatedPins[1].pin.$assign = "PA14";
+STEP_MOTOR.associatedPins[2].$name = "SLP2";
+STEP_MOTOR.associatedPins[2].pin.$assign = "PA15";
+STEP_MOTOR.associatedPins[3].$name = "RST2";
+STEP_MOTOR.associatedPins[3].pin.$assign = "PA16";
+STEP_MOTOR.associatedPins[4].$name = "DIR1";
+STEP_MOTOR.associatedPins[4].pin.$assign = "PA31";
+STEP_MOTOR.associatedPins[5].$name = "DCY1";
+STEP_MOTOR.associatedPins[5].pin.$assign = "PB24";
+STEP_MOTOR.associatedPins[6].$name = "SLP1";
+STEP_MOTOR.associatedPins[6].pin.$assign = "PB20";
+STEP_MOTOR.associatedPins[7].$name = "RST1";
+STEP_MOTOR.associatedPins[7].pin.$assign = "PA7";
+
+PWM2.$name = "DCC_100_PWM2";
+PWM2.ccIndex = [0];
+PWM2.clockDivider = 8;
+PWM2.timerCount = 10000;
+PWM2.pwmMode = "EDGE_ALIGN_UP";
+PWM2.interrupts = ["LOAD_EVENT"];
+PWM2.PWM_CHANNEL_0.$name = "ti_driverlib_pwm_PWMTimerCC0";
+PWM2.PWM_CHANNEL_0.ccValue = 5000;
+PWM2.PWM_CHANNEL_0.dutyCycle = 50;
+PWM2.peripheral.$assign = "TIMG0";
+PWM2.peripheral.ccp0Pin.$assign = "PA12";
+
+PWM1.$name = "DCC_100_PWM1";
+PWM1.ccIndex = [0];
+PWM1.clockDivider = 8;
+PWM1.clockPrescale = 2;
+PWM1.timerCount = 10000;
+PWM1.pwmMode = "EDGE_ALIGN_UP";
+PWM1.interrupts = ["LOAD_EVENT"];
+PWM1.PWM_CHANNEL_0.$name = "ti_driverlib_pwm_PWMTimerCC1";
+PWM1.PWM_CHANNEL_0.ccValue = 5000;
+PWM1.PWM_CHANNEL_0.dutyCycle = 50;
+PWM1.peripheral.$assign = "TIMA1";
+PWM1.peripheral.ccp0Pin.$assign = "PA28";
+
+VISION_UART.$name = "VISION_UART";
+VISION_UART.targetBaudRate = 115200;
+VISION_UART.enabledInterrupts = ["RX"];
+VISION_UART.peripheral.$assign = "UART1";
+VISION_UART.peripheral.rxPin.$assign = "PA9";
+VISION_UART.peripheral.txPin.$assign = "PA8";
+
+DEBUG_UART.$name = "DEBUG_UART";
+DEBUG_UART.targetBaudRate = 115200;
+DEBUG_UART.peripheral.$assign = "UART0";
+DEBUG_UART.peripheral.rxPin.$assign = "PA11";
+DEBUG_UART.peripheral.txPin.$assign = "PA10";
+
+SYSCTL.forceDefaultClkConfig = true;
+Board.peripheral.$suggestSolution = "DEBUGSS";
+Board.peripheral.swclkPin.$suggestSolution = "PA20";
+Board.peripheral.swdioPin.$suggestSolution = "PA19";

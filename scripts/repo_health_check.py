@@ -29,6 +29,8 @@ def main() -> int:
     exists("VisionResult interface", "maixcam_app/modules/base.py")
     exists("MaixCAM modules", "maixcam_app/modules")
     exists("TMX controller", "controller_tmx_mspm0")
+    exists("LP-MSPM0G3507 integration", "controller_lp_mspm0g3507/README.md")
+    exists("LP-MSPM0G3507 SysConfig", "controller_lp_mspm0g3507/empty.syscfg")
     exists("DCC migration notes", "controller_tmx_mspm0/dcc_reference_notes.md")
     exists("UART protocol", "controller_tmx_mspm0/protocol.md")
     exists("DeepSeek tuning", "maixcam_app/tools/tune_with_deepseek.py")

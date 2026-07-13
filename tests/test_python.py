@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 
 from maixcam_app.comm.uart_protocol import encode_vision_result
-from maixcam_app.main import apply_camera_profile, load_config, resolve_camera_profile
+from maixcam_app.main import apply_camera_profile, load_config, resolve_camera_profile, uart_pin_functions
 from maixcam_app.modules.laser_spot import LaserSpotModule
 from maixcam_app.tools.dataset_schema import save_truth, validate_dataset
 from maixcam_app.tools.camera_sweep import analyze_frame, summarize_condition
@@ -17,6 +17,13 @@ from maixcam_app.tools.session_utils import prepare_session
 
 
 class VisionTests(unittest.TestCase):
+    def test_maixcam_uses_dedicated_uart1_pinmap(self):
+        self.assertEqual(uart_pin_functions("/dev/ttyS1"), [
+            ("A19", "UART1_TX"),
+            ("A18", "UART1_RX"),
+        ])
+        self.assertEqual(uart_pin_functions("/dev/ttyS0"), [])
+
     def test_field_camera_profile_is_manual_and_applied(self):
         config = load_config("maixcam_app/configs/purple_to_blue_wall.yaml")
         profile = resolve_camera_profile(config)

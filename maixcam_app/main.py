@@ -64,6 +64,12 @@ def apply_camera_profile(cam, camera_api, profile: dict) -> None:
     cam.awb_mode(camera_api.AwbMode.Auto)
 
 
+def uart_pin_functions(device: str) -> list[tuple[str, str]]:
+    if device == "/dev/ttyS1":
+        return [("A19", "UART1_TX"), ("A18", "UART1_RX")]
+    return []
+
+
 def load_config(path: str) -> dict:
     with open(path, "r", encoding="utf-8") as handle:
         text = handle.read()
@@ -84,7 +90,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--module", choices=sorted(MODULES), default="laser_spot")
     parser.add_argument("--config", default="maixcam_app/configs/purple_to_blue_wall.yaml")
-    parser.add_argument("--uart", default="/dev/ttyS0")
+    parser.add_argument("--uart", default="/dev/ttyS1")
     parser.add_argument("--baudrate", type=int, default=115200)
     parser.add_argument("--no-display", action="store_true")
     parser.add_argument("--debug", action="store_true")
@@ -92,7 +98,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def run(args: argparse.Namespace) -> None:
-    from maix import app, camera, display, image, uart
+    from maix import app, camera, display, err, image, pinmap, uart
 
     config = load_config(args.config)
     module = MODULES[args.module](config)
@@ -101,6 +107,8 @@ def run(args: argparse.Namespace) -> None:
     apply_camera_profile(cam, camera, camera_profile)
     cam.skip_frames(camera_profile["settle_frames"])
     disp = None if args.no_display else display.Display()
+    for pin, function in uart_pin_functions(args.uart):
+        err.check_raise(pinmap.set_pin_function(pin, function), f"failed to map {pin} to {function}")
     serial = uart.UART(args.uart, args.baudrate)
     while not app.need_exit():
         maix_img = cam.read()
