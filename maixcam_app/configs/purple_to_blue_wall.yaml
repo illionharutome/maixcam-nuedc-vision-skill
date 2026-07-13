@@ -1,8 +1,9 @@
 {
   "target_name": "laser_blue_shifted_purple",
-  "threshold_strategy": "or",
+  "threshold_strategy": "and",
   "thresholds": [
-    {"space": "hsv", "enabled": true, "lower": [105, 80, 35], "upper": [160, 255, 255]},
+    {"space": "hsv", "enabled": true, "lower": [115, 35, 30], "upper": [145, 255, 255]},
+    {"space": "blue_excess", "enabled": true, "lower": 6, "upper": 255},
     {"space": "lab", "enabled": false, "lower": [175, 115, 80], "upper": [255, 180, 150]},
     {"space": "brightness", "enabled": false, "lower": 245, "upper": 255}
   ],

@@ -18,6 +18,9 @@ def _range_mask(image: np.ndarray, space: str, lower: list[int], upper: list[int
         converted = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
     elif space == "brightness":
         converted = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    elif space == "blue_excess":
+        blue, green, red = cv2.split(image.astype(np.int16))
+        converted = np.clip(blue - np.maximum(green, red), 0, 255).astype(np.uint8)
     else:
         raise ValueError(f"unsupported color space: {space}")
     return cv2.inRange(converted, np.array(lower, dtype=np.uint8), np.array(upper, dtype=np.uint8))
@@ -40,7 +43,7 @@ class ColorBlobModule(VisionModule):
             space = str(rule["space"]).lower()
             lower = rule["lower"]
             upper = rule["upper"]
-            if space == "brightness":
+            if space in {"brightness", "blue_excess"}:
                 lower, upper = [int(lower)], [int(upper)]
             masks.append(_range_mask(roi_img, space, lower, upper))
         if not masks:
@@ -66,16 +69,29 @@ class ColorBlobModule(VisionModule):
         min_circularity = float(self.config.get("filters", {}).get("min_circularity", 0.3))
         candidates = []
         for contour in contours:
-            area = cv2.contourArea(contour)
+            contour_area = cv2.contourArea(contour)
             perimeter = cv2.arcLength(contour, True)
-            circularity = 4 * math.pi * area / (perimeter * perimeter) if perimeter else 0.0
+            bx, by, bw, bh = cv2.boundingRect(contour)
+            local_contour = contour - np.array([[[bx, by]]], dtype=contour.dtype)
+            component = np.zeros((bh, bw), dtype=np.uint8)
+            cv2.drawContours(component, [local_contour], -1, 255, -1)
+            area = float(cv2.countNonZero(component))
+            if contour_area > 0 and perimeter > 0:
+                circularity = 4 * math.pi * contour_area / (perimeter * perimeter)
+            else:
+                fill_ratio = area / max(1, bw * bh)
+                aspect_ratio = min(bw, bh) / max(1, max(bw, bh))
+                circularity = fill_ratio * aspect_ratio
             if not minimum <= area <= maximum or circularity < min_circularity:
                 continue
             moments = cv2.moments(contour)
             if moments["m00"] == 0:
-                continue
-            cx = x + int(moments["m10"] / moments["m00"])
-            cy = y + int(moments["m01"] / moments["m00"])
+                pixels_y, pixels_x = np.nonzero(component)
+                cx = x + bx + int(round(float(pixels_x.mean())))
+                cy = y + by + int(round(float(pixels_y.mean())))
+            else:
+                cx = x + int(moments["m10"] / moments["m00"])
+                cy = y + int(moments["m01"] / moments["m00"])
             score = area * (0.5 + 0.5 * circularity)
             candidates.append({"x": cx, "y": cy, "area": area, "circularity": circularity, "score": score, "contour": contour})
         chosen = self.tracker.choose(candidates)
@@ -103,4 +119,3 @@ class ColorBlobModule(VisionModule):
         cv2.putText(img, f"{self.name} {result['status']} c={result['confidence']:.2f}", (5, 18),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 255, 0), 1, cv2.LINE_AA)
         return img
-

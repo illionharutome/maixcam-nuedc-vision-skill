@@ -24,24 +24,25 @@ class VisionTests(unittest.TestCase):
 
     def test_laser_synthetic(self):
         image = np.zeros((240, 320, 3), dtype=np.uint8)
-        cv2.circle(image, (148, 132), 4, (255, 150, 255), -1)
+        cv2.circle(image, (148, 132), 4, (255, 80, 160), -1)
         module = LaserSpotModule(load_config("maixcam_app/configs/purple_to_blue_wall.yaml"))
         result = module.process(image)
         self.assertTrue(result["ok"])
         self.assertEqual((result["target_x"], result["target_y"]), (148, 132))
         self.assertEqual((result["dx"], result["dy"]), (-12, 12))
 
-    def test_tiny_dim_laser_survives_without_accepting_white_highlight(self):
+    def test_single_pixel_dim_laser_survives_without_accepting_highlights(self):
         config = load_config("maixcam_app/configs/purple_to_blue_wall.yaml")
         image = np.full((240, 320, 3), 200, dtype=np.uint8)
         cv2.circle(image, (250, 80), 5, (255, 255, 255), -1)
-        image[132:134, 148:150] = (71, 12, 23)
+        image[132, 148] = (55, 39, 46)
         result = LaserSpotModule(config).process(image)
         self.assertTrue(result["ok"])
         self.assertEqual((result["target_x"], result["target_y"]), (148, 132))
 
         highlight_only = np.full((240, 320, 3), 200, dtype=np.uint8)
         cv2.circle(highlight_only, (250, 80), 5, (255, 255, 255), -1)
+        highlight_only[132, 148] = (50, 45, 46)
         self.assertFalse(LaserSpotModule(config).process(highlight_only)["ok"])
 
     def test_default_yaml_is_dependency_free_json(self):
@@ -57,7 +58,7 @@ class VisionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             samples = Path(temporary)
             positive = np.zeros((240, 320, 3), dtype=np.uint8)
-            cv2.circle(positive, (148, 132), 4, (255, 150, 255), -1)
+            cv2.circle(positive, (148, 132), 4, (255, 80, 160), -1)
             cv2.imwrite(str(samples / "positive.png"), positive)
             cv2.imwrite(str(samples / "negative.png"), np.zeros_like(positive))
             save_truth(samples, {
