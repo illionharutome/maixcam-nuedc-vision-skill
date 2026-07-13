@@ -31,6 +31,19 @@ class VisionTests(unittest.TestCase):
         self.assertEqual((result["target_x"], result["target_y"]), (148, 132))
         self.assertEqual((result["dx"], result["dy"]), (-12, 12))
 
+    def test_tiny_dim_laser_survives_without_accepting_white_highlight(self):
+        config = load_config("maixcam_app/configs/purple_to_blue_wall.yaml")
+        image = np.full((240, 320, 3), 200, dtype=np.uint8)
+        cv2.circle(image, (250, 80), 5, (255, 255, 255), -1)
+        image[132:134, 148:150] = (71, 12, 23)
+        result = LaserSpotModule(config).process(image)
+        self.assertTrue(result["ok"])
+        self.assertEqual((result["target_x"], result["target_y"]), (148, 132))
+
+        highlight_only = np.full((240, 320, 3), 200, dtype=np.uint8)
+        cv2.circle(highlight_only, (250, 80), 5, (255, 255, 255), -1)
+        self.assertFalse(LaserSpotModule(config).process(highlight_only)["ok"])
+
     def test_default_yaml_is_dependency_free_json(self):
         with open("maixcam_app/configs/default.yaml", encoding="utf-8") as handle:
             self.assertEqual(json.load(handle)["camera"]["width"], 320)
