@@ -20,6 +20,8 @@
 
 `laser_spot` 支持 LAB、HSV、亮度、蓝/红通道优势、ROI、面积、圆度、上一帧距离约束、丢帧保持和 debug overlay。紫光使用 `purple_to_blue_wall.yaml`；红光从 `red_laser_wall.yaml` 开始标定。
 
+2023 E 题当前提供两种可切换的追踪参考：`e23_red_center_track.yaml` 让红光回到相机中心，适合首轮云台联调；`e23_dual_laser_track.yaml` 直接计算红光与云台蓝紫光的像素差。`e23_a4_black_frame.yaml` 用于 A4 黑胶带旋转矩形、四角和边线路径提取。
+
 ## 天猛星与 DCC-100
 
 链路严格保持：
@@ -47,6 +49,8 @@ $MV,AIM,1,160,120,148,132,-12,12,91,256,AIMING#
 
 ```bash
 python maixcam_app/main.py --module laser_spot --config maixcam_app/configs/purple_to_blue_wall.yaml --uart /dev/ttyS1 --debug
+python maixcam_app/main.py --module e23_track --config maixcam_app/configs/e23_red_center_track.yaml --uart /dev/ttyS1 --debug
+python maixcam_app/main.py --module rectangle_detect --config maixcam_app/configs/e23_a4_black_frame.yaml --uart /dev/ttyS1 --debug
 python maixcam_app/tools/collect_dataset.py --module laser_spot --session purple_wall_001
 python maixcam_app/tools/replay_test.py --config maixcam_app/configs/purple_to_blue_wall.yaml --samples logs/tuning/session_xxx/samples
 python maixcam_app/tools/tune_with_deepseek.py --session logs/tuning/session_xxx

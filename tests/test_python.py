@@ -9,6 +9,8 @@ import numpy as np
 from maixcam_app.comm.uart_protocol import encode_vision_result
 from maixcam_app.main import apply_camera_profile, load_config, resolve_camera_profile, uart_pin_functions
 from maixcam_app.modules.laser_spot import LaserSpotModule
+from maixcam_app.modules.e23_track import E23TrackModule
+from maixcam_app.modules.rectangle_detect import RectangleDetectModule, order_corners
 from maixcam_app.tools.dataset_schema import save_truth, validate_dataset
 from maixcam_app.tools.camera_sweep import analyze_frame, summarize_condition
 from maixcam_app.tools.collect_dataset import apply_capture_camera_settings
@@ -18,6 +20,43 @@ from maixcam_app.tools.session_utils import prepare_session
 
 
 class VisionTests(unittest.TestCase):
+    def test_e23_red_target_tracks_image_center(self):
+        config = load_config("maixcam_app/configs/e23_red_center_track.yaml")
+        image = np.full((240, 320, 3), 70, dtype=np.uint8)
+        cv2.circle(image, (190, 100), 2, (30, 35, 150), -1)
+        result = E23TrackModule(config).process(image)
+        self.assertTrue(result["ok"])
+        self.assertEqual((result["center_x"], result["center_y"]), (160, 120))
+        self.assertEqual((result["dx"], result["dy"]), (30, -20))
+        self.assertEqual(result["mode"], "TRACK")
+
+    def test_e23_dual_laser_uses_tracking_spot_as_reference(self):
+        config = load_config("maixcam_app/configs/e23_dual_laser_track.yaml")
+        image = np.full((240, 320, 3), 50, dtype=np.uint8)
+        cv2.circle(image, (190, 100), 2, (30, 35, 150), -1)
+        cv2.circle(image, (170, 110), 2, (150, 45, 70), -1)
+        result = E23TrackModule(config).process(image)
+        self.assertTrue(result["ok"])
+        self.assertEqual((result["center_x"], result["center_y"]), (170, 110))
+        self.assertEqual((result["dx"], result["dy"]), (20, -10))
+
+    def test_rotated_a4_frame_returns_ordered_corners_and_path(self):
+        config = load_config("maixcam_app/configs/e23_a4_black_frame.yaml")
+        image = np.full((240, 320, 3), 220, dtype=np.uint8)
+        box = cv2.boxPoints(((160, 120), (150, 106), 18)).astype(np.int32)
+        cv2.polylines(image, [box], True, (10, 10, 10), 12)
+        result = RectangleDetectModule(config).process(image)
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["mode"], "LINE")
+        self.assertEqual(len(result["extra"]["corners"]), 4)
+        self.assertEqual(len(result["extra"]["path"]), 200)
+        corners = result["extra"]["corners"]
+        self.assertLess(corners[0][0] + corners[0][1], corners[2][0] + corners[2][1])
+
+    def test_corner_order_is_tl_tr_br_bl(self):
+        self.assertEqual(order_corners([[90, 80], [10, 20], [80, 10], [20, 90]]),
+                         [[10, 20], [80, 10], [90, 80], [20, 90]])
+
     def test_red_laser_config_detects_red_excess(self):
         image = np.full((240, 320, 3), 30, dtype=np.uint8)
         image[132, 148] = (20, 25, 90)

@@ -1,0 +1,35 @@
+{
+  "camera": {
+    "width": 320,
+    "height": 240,
+    "exposure_mode": "manual",
+    "exposure_us": 8000,
+    "gain": 1024,
+    "awb_mode": "auto",
+    "settle_frames": 30
+  },
+  "reference_mode": "tracking_laser",
+  "lock_deadband_px": 8,
+  "target_detector": {
+    "threshold_strategy": "and",
+    "thresholds": [
+      {"space": "red_excess", "enabled": true, "lower": 8, "upper": 255},
+      {"space": "brightness", "enabled": true, "lower": 40, "upper": 255}
+    ],
+    "roi": [0, 0, 320, 240],
+    "filters": {"min_area": 1, "max_area": 600, "min_circularity": 0.1},
+    "morphology": {"kernel": 1},
+    "tracking": {"max_jump_px": 90, "hold_frames": 4}
+  },
+  "reference_detector": {
+    "threshold_strategy": "and",
+    "thresholds": [
+      {"space": "hsv", "enabled": true, "lower": [105, 25, 25], "upper": [150, 255, 255]},
+      {"space": "blue_excess", "enabled": true, "lower": 5, "upper": 255}
+    ],
+    "roi": [0, 0, 320, 240],
+    "filters": {"min_area": 1, "max_area": 600, "min_circularity": 0.1},
+    "morphology": {"kernel": 1},
+    "tracking": {"max_jump_px": 90, "hold_frames": 4}
+  }
+}
