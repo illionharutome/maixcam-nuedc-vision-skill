@@ -32,6 +32,38 @@ MODULES = {
 }
 
 
+def resolve_camera_profile(config: dict) -> dict:
+    raw = config.get("camera", {})
+    profile = {
+        "width": int(raw.get("width", 320)),
+        "height": int(raw.get("height", 240)),
+        "exposure_mode": str(raw.get("exposure_mode", "auto")).lower(),
+        "exposure_us": int(raw.get("exposure_us", 0)),
+        "gain": int(raw.get("gain", 0)),
+        "awb_mode": str(raw.get("awb_mode", "auto")).lower(),
+        "settle_frames": int(raw.get("settle_frames", 20)),
+    }
+    if profile["width"] <= 0 or profile["height"] <= 0 or profile["settle_frames"] < 0:
+        raise ValueError("camera width/height must be positive and settle_frames cannot be negative")
+    if profile["exposure_mode"] not in {"auto", "manual"}:
+        raise ValueError("camera exposure_mode must be auto or manual")
+    if profile["exposure_mode"] == "manual" and (profile["exposure_us"] <= 0 or profile["gain"] <= 0):
+        raise ValueError("manual camera mode requires positive exposure_us and gain")
+    if profile["awb_mode"] != "auto":
+        raise ValueError("only auto AWB is currently supported by the field entry point")
+    return profile
+
+
+def apply_camera_profile(cam, camera_api, profile: dict) -> None:
+    if profile["exposure_mode"] == "manual":
+        cam.exp_mode(camera_api.AeMode.Manual)
+        cam.exposure(profile["exposure_us"])
+        cam.gain(profile["gain"])
+    else:
+        cam.exp_mode(camera_api.AeMode.Auto)
+    cam.awb_mode(camera_api.AwbMode.Auto)
+
+
 def load_config(path: str) -> dict:
     with open(path, "r", encoding="utf-8") as handle:
         text = handle.read()
@@ -64,8 +96,10 @@ def run(args: argparse.Namespace) -> None:
 
     config = load_config(args.config)
     module = MODULES[args.module](config)
-    cam = camera.Camera(320, 240, image.Format.FMT_BGR888, buff_num=1)
-    cam.skip_frames(20)
+    camera_profile = resolve_camera_profile(config)
+    cam = camera.Camera(camera_profile["width"], camera_profile["height"], image.Format.FMT_BGR888, buff_num=1)
+    apply_camera_profile(cam, camera, camera_profile)
+    cam.skip_frames(camera_profile["settle_frames"])
     disp = None if args.no_display else display.Display()
     serial = uart.UART(args.uart, args.baudrate)
     while not app.need_exit():

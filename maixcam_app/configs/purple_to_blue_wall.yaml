@@ -1,5 +1,14 @@
 {
   "target_name": "laser_blue_shifted_purple",
+  "camera": {
+    "width": 320,
+    "height": 240,
+    "exposure_mode": "manual",
+    "exposure_us": 600,
+    "gain": 1024,
+    "awb_mode": "auto",
+    "settle_frames": 20
+  },
   "threshold_strategy": "and",
   "thresholds": [
     {"space": "hsv", "enabled": true, "lower": [115, 35, 30], "upper": [145, 255, 255]},

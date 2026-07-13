@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 
 from maixcam_app.comm.uart_protocol import encode_vision_result
-from maixcam_app.main import load_config
+from maixcam_app.main import apply_camera_profile, load_config, resolve_camera_profile
 from maixcam_app.modules.laser_spot import LaserSpotModule
 from maixcam_app.tools.dataset_schema import save_truth, validate_dataset
 from maixcam_app.tools.camera_sweep import analyze_frame, summarize_condition
@@ -17,6 +17,44 @@ from maixcam_app.tools.session_utils import prepare_session
 
 
 class VisionTests(unittest.TestCase):
+    def test_field_camera_profile_is_manual_and_applied(self):
+        config = load_config("maixcam_app/configs/purple_to_blue_wall.yaml")
+        profile = resolve_camera_profile(config)
+        self.assertEqual((profile["exposure_us"], profile["gain"]), (600, 1024))
+
+        class FakeCameraApi:
+            class AeMode:
+                Manual = "ae_manual"
+                Auto = "ae_auto"
+
+            class AwbMode:
+                Auto = "awb_auto"
+
+        class FakeCamera:
+            def __init__(self):
+                self.calls = []
+
+            def exp_mode(self, value):
+                self.calls.append(("exp_mode", value))
+
+            def exposure(self, value):
+                self.calls.append(("exposure", value))
+
+            def gain(self, value):
+                self.calls.append(("gain", value))
+
+            def awb_mode(self, value):
+                self.calls.append(("awb_mode", value))
+
+        cam = FakeCamera()
+        apply_camera_profile(cam, FakeCameraApi, profile)
+        self.assertEqual(cam.calls, [
+            ("exp_mode", "ae_manual"),
+            ("exposure", 600),
+            ("gain", 1024),
+            ("awb_mode", "awb_auto"),
+        ])
+
     def test_protocol_example(self):
         result = {"ok": True, "mode": "AIM", "center_x": 160, "center_y": 120, "target_x": 148,
                   "target_y": 132, "dx": -12, "dy": 12, "confidence": 0.91, "distance": 256, "status": "AIMING"}
